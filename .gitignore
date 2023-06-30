@@ -1,0 +1,7 @@
+# development files
+.env
+*.json
+*.db
+
+# build artifacts
+/target
