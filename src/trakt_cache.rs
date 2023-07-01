@@ -7,10 +7,10 @@ use crate::schema::trakt_shows;
 use std::{thread, time};
 
 use diesel::prelude::*;
+use governor::{Quota, RateLimiter};
+use nonzero_ext::*;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-use nonzero_ext::*;
-use governor::{Quota, RateLimiter};
 
 const APP_USER_AGENT: &str = "Trakt TV Selector";
 // 1/sec -> 300 per 5min
@@ -194,8 +194,8 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
                     }
 
                     break;
-                },
-                Err(_) => {},
+                }
+                Err(_) => {}
             }
 
             thread::sleep(TIME_STEP);

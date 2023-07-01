@@ -16,16 +16,3 @@ pub struct TraktShow {
     pub no_seasons: Option<i32>,
     pub no_episodes: Option<i32>,
 }
-
-// #[derive(Insertable)]
-// #[diesel(table_name = trakt_shows)]
-// pub struct NewTraktShow<'a> {
-//     pub id: i32,
-//     pub tmdb_id: i32,
-//     pub name: &'a str,
-//     pub country: Option<&'a str>,
-//     pub release_year: Option<i32>,
-//     pub network: Option<&'a str>,
-//     pub no_seasons: Option<i32>,
-//     pub no_episodes: Option<i32>,
-// }
