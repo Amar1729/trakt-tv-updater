@@ -10,6 +10,8 @@ chrono = { version = "0.4.26", default-features = false, features = ["clock", "s
 diesel = { version = "2.1.0", features = ["sqlite", "chrono", "returning_clauses_for_sqlite_3_35"] }
 dotenvy = "0.15.7"
 futures = "0.3.28"
+governor = "0.5.1"
+nonzero_ext = "0.3.0"
 reqwest = { version = "0.11.18", features = ["json"] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.99"

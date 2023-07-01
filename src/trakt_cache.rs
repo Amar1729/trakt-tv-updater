@@ -4,11 +4,18 @@
 use crate::models::TraktShow;
 use crate::schema::trakt_shows;
 
+use std::{thread, time};
+
 use diesel::prelude::*;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
+use nonzero_ext::*;
+use governor::{Quota, RateLimiter};
 
 const APP_USER_AGENT: &str = "Trakt TV Selector";
+// 1/sec -> 300 per 5min
+const RATE_LIMIT: u32 = 3u32;
+const TIME_STEP: time::Duration = time::Duration::from_millis(100);
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ApiIDs {
@@ -148,13 +155,53 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
         .build()
         .unwrap();
 
+    let lim = RateLimiter::direct(Quota::per_second(nonzero!(RATE_LIMIT)));
+
     // let mut shows: Vec<TraktShow> = vec![];
     for tmdb_id in tmdb_ids {
         // check if tmdb_id is in local database
         // if tmdb_id is not in our local db, we have to query the API
-        for api_show in query_trakt_api(&client, tmdb_id).await {
-            // shows.push(api_show)
-            write_trakt_db(ctx, api_show);
+        if let Some(tmdb_rows) = trakt_shows::table
+            .filter(trakt_shows::tmdb_id.eq(tmdb_id as i32))
+            .select(TraktShow::as_select())
+            .load(ctx)
+            .optional()
+            .unwrap()
+        {
+            if tmdb_rows.len() > 0 {
+                println!("found tmdb rows: {} {}", tmdb_rows.len(), tmdb_rows[0].name);
+                // shows.append(tmdb_rows);
+                continue;
+            }
         }
+
+        // until_ready should block until the limiter is ready to submit another job, right?
+        // but it doesn't, so instead i'm doing this wacky loop{} construction
+        // lim.until_ready().await;
+        loop {
+            match lim.check() {
+                Ok(_) => {
+                    for api_show in query_trakt_api(&client, tmdb_id).await {
+                        println!("querying...");
+                        // shows.push(api_show)
+                        write_trakt_db(ctx, api_show);
+                    }
+
+                    break;
+                },
+                Err(_) => {},
+            }
+
+            thread::sleep(TIME_STEP);
+        }
+    }
+}
+
+mod tests {
+    #[test]
+    fn check_rate_limit() {
+        use crate::trakt_cache::RATE_LIMIT;
+        let total = RATE_LIMIT * 60 * 5;
+        assert!(total < 1000u32);
     }
 }
