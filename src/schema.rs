@@ -11,6 +11,7 @@ diesel::table! {
     trakt_shows (id) {
         id -> Integer,
         tmdb_id -> Integer,
+        imdb_id -> Nullable<Text>,
         name -> Text,
         country -> Nullable<Text>,
         release_year -> Nullable<Integer>,

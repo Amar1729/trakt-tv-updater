@@ -93,6 +93,7 @@ pub fn write_trakt_db(ctx: &mut SqliteConnection, show: ApiShow) -> TraktShow {
     let new_show = TraktShow {
         id: show.ids.trakt as i32,
         tmdb_id: show.ids.tmdb as i32,
+        imdb_id: show.ids.imdb,
         name: show.title,
         country: None,
         release_year: match show.year {
@@ -174,6 +175,11 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
                 continue;
             }
         }
+
+        // TODO - change this function to just hydrate_trakt
+        // we'll hydrate from IMDB first (and maybe remove tmdb entirely?)
+        // if let Some(imdb_rows) = trakt_shows::table
+        //     .filter(trakt_shows::imdb_id.eq())
 
         // until_ready should block until the limiter is ready to submit another job, right?
         // but it doesn't, so instead i'm doing this wacky loop{} construction

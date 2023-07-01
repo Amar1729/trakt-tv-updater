@@ -1,5 +1,6 @@
 mod models;
 mod schema;
+mod sources;
 mod tmdb_reader;
 mod trakt_cache;
 
