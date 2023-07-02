@@ -1,12 +1,24 @@
 use polars::prelude::*;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 /// currently unimpl'd: will be used to download IMDB dataset on init
 pub fn download_source() {
     unimplemented!();
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImdbShow {
+    pub tconst: String,
+    pub primary_title: Option<String>,
+    pub original_title: Option<String>,
+    pub start_year: Option<i64>,
+    pub end_year: Option<i64>,
+}
+
 pub fn tv_show_ids() -> DataFrame {
-    let fname = "./title.basics.tsv";
+    let fname = "./title.basics.short.tsv";
 
     let mut schema = Schema::new();
     schema.with_column("endYear".to_string().into(), DataType::Int64);
@@ -19,7 +31,14 @@ pub fn tv_show_ids() -> DataFrame {
         .with_dtype_overwrite(Some(&schema))
         .finish()
         .unwrap()
-        .sort("startYear", Default::default())
+        .sort(
+            "startYear",
+            SortOptions {
+                descending: true,
+                nulls_last: true,
+                multithreaded: true,
+            },
+        )
         .filter(
             // you should be able to do is_in here but i couldn't figure out the syntax?
             col("titleType")
@@ -34,9 +53,37 @@ pub fn tv_show_ids() -> DataFrame {
             col("endYear"),
         ]);
 
-    let df = q.collect().unwrap();
+    q.with_streaming(true).collect().unwrap()
+}
 
-    println!("{}", df);
+pub fn get_show_vec() -> Vec<ImdbShow> {
+    let df = tv_show_ids().head(Some(100));
 
-    df
+    let fields = df.get_columns();
+    let columns: Vec<&str> = fields.iter().map(|x| x.name()).collect();
+
+    let mut items: Vec<ImdbShow> = vec![];
+
+    for idx in 0..df.height() {
+        let mut map = std::collections::HashMap::new();
+
+        let row = df.get_row(idx).unwrap();
+
+        for (column, elem) in std::iter::zip(&columns, &mut row.0.iter()) {
+            let value = match elem {
+                AnyValue::Null => json!(Option::<String>::None),
+                AnyValue::Utf8(val) => json!(val),
+                AnyValue::Int64(val) => json!(val),
+                other => unimplemented!("{:?}", other),
+            };
+            map.insert(*column as &str, value);
+        }
+
+        let j_text = serde_json::to_string(&map).unwrap();
+        let j_row = serde_json::from_str::<ImdbShow>(&j_text).unwrap();
+
+        items.push(j_row.clone());
+    }
+
+    items
 }
