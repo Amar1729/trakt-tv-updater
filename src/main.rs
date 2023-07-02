@@ -1,3 +1,4 @@
+mod interface;
 mod models;
 mod schema;
 mod sources;
