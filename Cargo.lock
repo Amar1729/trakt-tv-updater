@@ -2215,6 +2215,7 @@ name = "trakt-tv-updater"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "crossterm",
  "diesel",
  "dotenvy",
  "futures",
@@ -2225,7 +2226,6 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "termion",
  "tokio",
 ]
 

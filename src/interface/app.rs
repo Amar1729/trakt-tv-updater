@@ -1,91 +1,49 @@
-use ratatui::widgets::{Table, TableState};
+use std::error;
 
-pub struct Show<'a> {
-    pub trakt_id: i64,
-    pub imdb_id: &'a str,
-    pub original_name: &'a str,
-    pub start_year: i64,
+/// Application result type.
+pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
+
+/// Application.
+#[derive(Debug)]
+pub struct App {
+    /// Is the application running?
+    pub running: bool,
+    /// counter
+    pub counter: u8,
 }
 
-pub struct App<'a> {
-    pub title: &'a str,
-    pub should_quit: bool,
-
-    // pub tabs: TabsState<'a>,
-    // pub servers: Vec<Server<'a>>,
-    // pub enhanced_graphics: bool,
-    pub state: TableState,
-    pub items: Vec<Show<'a>>,
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            running: true,
+            counter: 0,
+        }
+    }
 }
 
-impl<'a> App<'a> {
-    pub fn new(title: &'a str, enhanced_graphics: bool) -> App<'a> {
-        App {
-            title,
-            should_quit: false,
-            // enhanced_graphics,
-            state: TableState::default().with_selected(Some(0)),
-            items: vec![
-                Show {
-                    trakt_id: 1,
-                    imdb_id: "tt01",
-                    original_name: "Some show",
-                    start_year: 2000,
-                },
-                Show {
-                    trakt_id: 2,
-                    imdb_id: "tt02",
-                    original_name: "New show",
-                    start_year: 1998,
-                },
-            ],
+impl App {
+    /// Constructs a new instance of [`App`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Handles the tick event of the terminal.
+    pub fn tick(&self) {}
+
+    /// Set running to false to quit the application.
+    pub fn quit(&mut self) {
+        self.running = false;
+    }
+
+    pub fn increment_counter(&mut self) {
+        if let Some(res) = self.counter.checked_add(1) {
+            self.counter = res;
         }
     }
 
-    // pub fn on_right(&mut self) {
-    //     self.tabs.next();
-    // }
-
-    // pub fn on_left(&mut self) {
-    //     self.tabs.previous();
-    // }
-
-    pub fn next(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    pub fn previous(&mut self) {
-        let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
-            None => 0,
-        };
-        self.state.select(Some(i));
-    }
-
-    pub fn on_key(&mut self, c: char) {
-        match c {
-            'q' => {
-                self.should_quit = true;
-            }
-            _ => {}
+    pub fn decrement_counter(&mut self) {
+        if let Some(res) = self.counter.checked_sub(1) {
+            self.counter = res;
         }
     }
-
-    pub fn on_tick(&mut self) {}
 }

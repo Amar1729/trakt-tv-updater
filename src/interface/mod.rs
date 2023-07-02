@@ -1,91 +1,53 @@
+/// Application.
 mod app;
+
+/// Terminal events handler.
+mod event;
+
+/// Widget renderer.
 mod ui;
 
-use std::{error::Error, io, sync::mpsc, thread, time::Duration};
+/// Terminal user interface.
+mod tui;
 
-use ratatui::{
-    backend::{Backend, TermionBackend},
-    Terminal,
+/// Event handler.
+mod handler;
+
+use std::io;
+use ratatui::backend::CrosstermBackend;
+use ratatui::Terminal;
+use crate::interface::{
+    app::{App, AppResult},
+    event::{Event, EventHandler},
+    handler::handle_key_events,
+    tui::Tui,
 };
-use termion::{
-    event::Key,
-    input::{MouseTerminal, TermRead},
-    raw::IntoRawMode,
-    screen::IntoAlternateScreen,
-};
 
-// use crate::{app::App, ui};
-use crate::interface::app::App;
+pub fn run() -> AppResult<()> {
+    // Create an application.
+    let mut app = App::new();
 
-pub fn run(tick_rate: Duration, enhanced_graphics: bool) -> Result<(), Box<dyn Error>> {
-    // setup terminal
-    let stdout = io::stdout()
-        .into_raw_mode()
-        .unwrap()
-        .into_alternate_screen()
-        .unwrap();
-    let stdout = MouseTerminal::from(stdout);
-    let backend = TermionBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    // Initialize the terminal user interface.
+    let backend = CrosstermBackend::new(io::stderr());
+    let terminal = Terminal::new(backend)?;
+    let events = EventHandler::new(250);
+    let mut tui = Tui::new(terminal, events);
+    tui.init()?;
 
-    // create app and run it
-    let app = App::new("tabs", enhanced_graphics);
-    let res = run_app(&mut terminal, app, tick_rate)?;
-
-    terminal.show_cursor()?;
-
-    Ok(())
-}
-
-fn run_app<B: Backend>(
-    terminal: &mut Terminal<B>,
-    mut app: App,
-    tick_rate: Duration,
-) -> Result<(), Box<dyn Error>> {
-    let events = events(tick_rate);
-    loop {
-        terminal.draw(|f| ui::draw(f, &mut app))?;
-
-        match events.recv()? {
-            Event::Input(key) => match key {
-                Key::Char(c) => app.on_key(c),
-                Key::Up => app.previous(),
-                Key::Down => app.next(),
-                // Key::Left => app.on_left(),
-                // Key::Right => app.on_right(),
-                _ => {}
-            },
-            Event::Tick => app.on_tick(),
-        }
-        if app.should_quit {
-            return Ok(());
+    // Start the main loop.
+    while app.running {
+        // Render the user interface.
+        tui.draw(&mut app)?;
+        // Handle events.
+        match tui.events.next()? {
+            Event::Tick => app.tick(),
+            Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
+            Event::Mouse(_) => {}
+            Event::Resize(_, _) => {}
         }
     }
-}
 
-enum Event {
-    Input(Key),
-    Tick,
-}
-
-fn events(tick_rate: Duration) -> mpsc::Receiver<Event> {
-    let (tx, rx) = mpsc::channel();
-    let keys_tx = tx.clone();
-    thread::spawn(move || {
-        let stdin = io::stdin();
-        for key in stdin.keys().flatten() {
-            if let Err(err) = keys_tx.send(Event::Input(key)) {
-                eprintln!("{err}");
-                return;
-            }
-        }
-    });
-    thread::spawn(move || loop {
-        if let Err(err) = tx.send(Event::Tick) {
-            eprintln!("{err}");
-            break;
-        }
-        thread::sleep(tick_rate);
-    });
-    rx
+    // Exit the user interface.
+    tui.exit()?;
+    Ok(())
 }
