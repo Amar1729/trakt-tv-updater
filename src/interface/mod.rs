@@ -13,19 +13,22 @@ mod tui;
 /// Event handler.
 mod handler;
 
-use std::io;
+use crate::{
+    interface::{
+        app::{App, AppResult},
+        event::{Event, EventHandler},
+        handler::handle_key_events,
+        tui::Tui,
+    },
+    sources::imdb_reader::ImdbShow,
+};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
-use crate::interface::{
-    app::{App, AppResult},
-    event::{Event, EventHandler},
-    handler::handle_key_events,
-    tui::Tui,
-};
+use std::io;
 
-pub fn run() -> AppResult<()> {
+pub fn run(items: Vec<ImdbShow>) -> AppResult<()> {
     // Create an application.
-    let mut app = App::new();
+    let mut app = App::new(items);
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());

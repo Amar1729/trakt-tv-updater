@@ -1,8 +1,8 @@
 use ratatui::{
     backend::Backend,
-    layout::Alignment,
-    style::{Color, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table},
     Frame,
 };
 
@@ -10,27 +10,56 @@ use crate::interface::app::App;
 
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
-    // This is where you add new widgets.
-    // See the following resources:
-    // - https://docs.rs/ratatui/latest/ratatui/widgets/index.html
-    // - https://github.com/tui-rs-revival/ratatui/tree/master/examples
+    let outer = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(1), Constraint::Min(0)].as_ref())
+        .split(frame.size());
+
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Min(0), Constraint::Length(1)].as_ref())
+        .split(outer[1]);
+
+    let rows = app.items.iter().map(|show| {
+        Row::new(vec![
+            Cell::from(show.tconst.as_str()),
+            Cell::from(show.original_title.clone().unwrap()),
+            Cell::from(show.start_year.unwrap().to_string()),
+        ])
+    });
+
+    // placeholder for now:
+    // this will be text input for searching for shows
     frame.render_widget(
-        Paragraph::new(format!(
-            "This is a tui template.\n\
-                Press `Esc`, `Ctrl-C` or `q` to stop running.\n\
-                Press left and right to increment and decrement the counter respectively.\n\
-                Counter: {}",
-            app.counter
-        ))
-        .block(
-            Block::default()
-                .title("Template")
-                .title_alignment(Alignment::Center)
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        )
-        .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-        .alignment(Alignment::Center),
-        frame.size(),
+        Paragraph::new("TODO: Input widget for searching for tv shows")
+            .block(Block::default().borders(Borders::NONE)),
+        outer[0],
+    );
+
+    // placeholder for now:
+    // this will be a scrollbar once i get the frame stuff working
+    frame.render_widget(Block::default().borders(Borders::LEFT), chunks[1]);
+
+    frame.render_stateful_widget(
+        Table::new(rows)
+            .header(
+                Row::new(vec!["imdb_id", "original_name", "start_year"])
+                    .style(Style::default().fg(Color::Yellow)),
+            )
+            .block(
+                Block::default()
+                    .title("Shows")
+                    .borders(Borders::ALL ^ Borders::RIGHT),
+            )
+            .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
+            .highlight_symbol(">> ")
+            .widths(&[
+                Constraint::Length(12),
+                Constraint::Length(35),
+                Constraint::Length(10),
+            ])
+            .style(Style::default().fg(Color::Cyan).bg(Color::Black)),
+        chunks[0],
+        &mut app.state,
     )
 }

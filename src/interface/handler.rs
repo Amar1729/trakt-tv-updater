@@ -14,12 +14,21 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
                 app.quit();
             }
         }
-        // Counter handlers
-        KeyCode::Right => {
-            app.increment_counter();
+        KeyCode::Up => {
+            app.prev(None);
         }
-        KeyCode::Left => {
-            app.decrement_counter();
+        KeyCode::Down => {
+            app.next(None);
+        }
+        KeyCode::Char('u') | KeyCode::Char('U') => {
+            if key_event.modifiers == KeyModifiers::CONTROL {
+                app.prev(Some(20));
+            }
+        }
+        KeyCode::Char('d') | KeyCode::Char('D') => {
+            if key_event.modifiers == KeyModifiers::CONTROL {
+                app.next(Some(20));
+            }
         }
         // Other handlers you could add here.
         _ => {}

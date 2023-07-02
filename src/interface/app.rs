@@ -1,5 +1,8 @@
 use std::error;
 
+use crate::sources::imdb_reader::ImdbShow;
+use ratatui::widgets::TableState;
+
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
@@ -8,23 +11,31 @@ pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    /// counter
-    pub counter: u8,
+
+    pub state: TableState,
+    pub items: Vec<ImdbShow>,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
             running: true,
-            counter: 0,
+
+            state: TableState::default().with_selected(Some(0)),
+            items: vec![],
         }
     }
 }
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(items: Vec<ImdbShow>) -> Self {
+        let mut app = Self::default();
+
+        // TODO: i should instead query items from imdb_reader(?) during tick()
+        app.items = items;
+
+        app
     }
 
     /// Handles the tick event of the terminal.
@@ -35,15 +46,34 @@ impl App {
         self.running = false;
     }
 
-    pub fn increment_counter(&mut self) {
-        if let Some(res) = self.counter.checked_add(1) {
-            self.counter = res;
-        }
+    pub fn next(&mut self, _step: Option<usize>) {
+        // TODO: _step for larger jumps (but i don't want them to wrap around)
+        // let bound = self.items.len();
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
     }
 
-    pub fn decrement_counter(&mut self) {
-        if let Some(res) = self.counter.checked_sub(1) {
-            self.counter = res;
-        }
+    pub fn prev(&mut self, _step: Option<usize>) {
+        // TODO: _step for larger jumps (but i don't want them to wrap around)
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.items.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => self.items.len() - 1,
+        };
+        self.state.select(Some(i));
     }
 }
