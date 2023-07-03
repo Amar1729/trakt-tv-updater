@@ -17,7 +17,7 @@ use crate::{
     interface::{
         app::{App, AppResult},
         event::{Event, EventHandler},
-        handler::handle_key_events,
+        handler::{handle_key_events, handle_mouse_events},
         tui::Tui,
     },
     sources::imdb_reader::ImdbShow,
@@ -45,7 +45,7 @@ pub fn run(items: Vec<ImdbShow>) -> AppResult<()> {
         match tui.events.next()? {
             Event::Tick => app.tick(),
             Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
-            Event::Mouse(_) => {}
+            Event::Mouse(mouse_event) => handle_mouse_events(mouse_event, &mut app)?,
             Event::Resize(_, _) => {}
         }
     }

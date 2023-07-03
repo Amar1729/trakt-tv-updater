@@ -46,32 +46,17 @@ impl App {
         self.running = false;
     }
 
-    pub fn next(&mut self, _step: Option<usize>) {
-        // TODO: _step for larger jumps (but i don't want them to wrap around)
-        // let bound = self.items.len();
+    pub fn next(&mut self, step: usize) {
         let i = match self.state.selected() {
-            Some(i) => {
-                if i >= self.items.len() - 1 {
-                    0
-                } else {
-                    i + 1
-                }
-            }
+            Some(i) => std::cmp::min(i + step, self.items.len() - 1),
             None => 0,
         };
         self.state.select(Some(i));
     }
 
-    pub fn prev(&mut self, _step: Option<usize>) {
-        // TODO: _step for larger jumps (but i don't want them to wrap around)
+    pub fn prev(&mut self, step: usize) {
         let i = match self.state.selected() {
-            Some(i) => {
-                if i == 0 {
-                    self.items.len() - 1
-                } else {
-                    i - 1
-                }
-            }
+            Some(i) => std::cmp::max(i as i32 - step as i32, 0) as usize,
             None => self.items.len() - 1,
         };
         self.state.select(Some(i));
