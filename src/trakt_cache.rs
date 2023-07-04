@@ -214,7 +214,7 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
 mod tests {
     #[test]
     fn check_rate_limit() {
-        use crate::trakt_cache::RATE_LIMIT;
+        use super::RATE_LIMIT;
         let total = RATE_LIMIT * 60 * 5;
         assert!(total < 1000u32);
     }
