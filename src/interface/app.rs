@@ -1,6 +1,6 @@
 use std::error;
 
-use crate::sources::imdb_reader::ImdbShow;
+use crate::models::TraktShow;
 use ratatui::widgets::TableState;
 
 /// Application result type.
@@ -13,7 +13,7 @@ pub struct App {
     pub running: bool,
 
     pub state: TableState,
-    pub items: Vec<ImdbShow>,
+    pub items: Vec<TraktShow>,
 }
 
 impl Default for App {
@@ -29,7 +29,7 @@ impl Default for App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new(items: Vec<ImdbShow>) -> Self {
+    pub fn new(items: Vec<TraktShow>) -> Self {
         let mut app = Self::default();
 
         // TODO: i should instead query items from imdb_reader(?) during tick()

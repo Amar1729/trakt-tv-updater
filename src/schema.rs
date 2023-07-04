@@ -8,11 +8,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    trakt_shows (id) {
-        id -> Integer,
-        tmdb_id -> Integer,
-        imdb_id -> Nullable<Text>,
-        name -> Text,
+    trakt_shows (imdb_id) {
+        imdb_id -> Text,
+        trakt_id -> Nullable<Integer>,
+        tmdb_id -> Nullable<Integer>,
+        primary_title -> Text,
+        original_title -> Text,
         country -> Nullable<Text>,
         release_year -> Nullable<Integer>,
         network -> Nullable<Text>,

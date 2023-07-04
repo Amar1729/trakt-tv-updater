@@ -60,7 +60,7 @@ pub fn read_trakt_db(ctx: &mut SqliteConnection) {
 
     println!("displaying: {} ", results.len());
     for t in results {
-        println!("{}", t.name);
+        println!("{}", t.original_title);
     }
 }
 
@@ -69,7 +69,7 @@ pub fn read_trakt_db(ctx: &mut SqliteConnection) {
 // the db
 pub fn query_trakt_db(ctx: &mut SqliteConnection, trakt_id: i32) -> Option<TraktShow> {
     trakt_shows::table
-        .filter(trakt_shows::id.eq(trakt_id))
+        .filter(trakt_shows::trakt_id.eq(trakt_id))
         .select(TraktShow::as_select())
         .first(ctx)
         .optional()
@@ -90,11 +90,15 @@ pub fn write_trakt_db(ctx: &mut SqliteConnection, show: ApiShow) -> TraktShow {
         return local_result;
     }
 
+    // TODO: some results from trakt API will give back null IMDB ID.
+    // it can't be the primary key if our initial data pull is from trakt.
+    // however, if our initial data is from IMDB, then primary key as imdb id makes sense.
     let new_show = TraktShow {
-        id: show.ids.trakt as i32,
-        tmdb_id: show.ids.tmdb as i32,
-        imdb_id: show.ids.imdb,
-        name: show.title,
+        trakt_id: Some(show.ids.trakt as i32),
+        tmdb_id: Some(show.ids.tmdb as i32),
+        imdb_id: show.ids.imdb.unwrap(),
+        primary_title: show.title.clone(),
+        original_title: show.title,
         country: None,
         release_year: match show.year {
             Some(y) => Some(y as i32),
@@ -170,7 +174,11 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
             .unwrap()
         {
             if tmdb_rows.len() > 0 {
-                println!("found tmdb rows: {} {}", tmdb_rows.len(), tmdb_rows[0].name);
+                println!(
+                    "found tmdb rows: {} {}",
+                    tmdb_rows.len(),
+                    tmdb_rows[0].original_title
+                );
                 // shows.append(tmdb_rows);
                 continue;
             }

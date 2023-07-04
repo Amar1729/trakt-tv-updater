@@ -20,13 +20,13 @@ use crate::{
         handler::{handle_key_events, handle_mouse_events},
         tui::Tui,
     },
-    sources::imdb_reader::ImdbShow,
+    models::TraktShow,
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
 
-pub fn run(items: Vec<ImdbShow>) -> AppResult<()> {
+pub fn run(items: Vec<TraktShow>) -> AppResult<()> {
     // Create an application.
     let mut app = App::new(items);
 

@@ -2,6 +2,8 @@ use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::models::TraktShow;
+
 /// currently unimpl'd: will be used to download IMDB dataset on init
 pub fn download_source() {
     unimplemented!();
@@ -9,7 +11,7 @@ pub fn download_source() {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ImdbShow {
+struct ImdbShow {
     pub tconst: String,
     pub primary_title: Option<String>,
     pub original_title: Option<String>,
@@ -56,13 +58,13 @@ pub fn tv_show_ids() -> DataFrame {
     q.with_streaming(true).collect().unwrap()
 }
 
-pub fn get_show_vec() -> Vec<ImdbShow> {
+pub fn get_show_vec() -> Vec<TraktShow> {
     let df = tv_show_ids().head(Some(100));
 
     let fields = df.get_columns();
     let columns: Vec<&str> = fields.iter().map(|x| x.name()).collect();
 
-    let mut items: Vec<ImdbShow> = vec![];
+    let mut items: Vec<TraktShow> = vec![];
 
     for idx in 0..df.height() {
         let mut map = std::collections::HashMap::new();
@@ -82,7 +84,18 @@ pub fn get_show_vec() -> Vec<ImdbShow> {
         let j_text = serde_json::to_string(&map).unwrap();
         let j_row = serde_json::from_str::<ImdbShow>(&j_text).unwrap();
 
-        items.push(j_row.clone());
+        items.push(TraktShow {
+            imdb_id: j_row.tconst,
+            trakt_id: None,
+            tmdb_id: None,
+            primary_title: j_row.primary_title.unwrap(),
+            original_title: j_row.original_title.unwrap(),
+            release_year: Some(j_row.start_year.unwrap() as i32),
+            no_seasons: None,
+            no_episodes: None,
+            country: None,
+            network: None,
+        });
     }
 
     items

@@ -22,9 +22,9 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
 
     let rows = app.items.iter().map(|show| {
         Row::new(vec![
-            Cell::from(show.tconst.as_str()),
-            Cell::from(show.original_title.clone().unwrap()),
-            Cell::from(show.start_year.unwrap().to_string()),
+            Cell::from(show.imdb_id.as_str()),
+            Cell::from(show.original_title.clone()),
+            Cell::from(show.release_year.unwrap().to_string()),
         ])
     });
 
