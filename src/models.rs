@@ -2,7 +2,7 @@ use super::schema::trakt_shows;
 
 use diesel::prelude::*;
 
-#[derive(Debug, Queryable, Selectable, Insertable)]
+#[derive(Clone, Debug, Queryable, Selectable, Insertable)]
 #[diesel(table_name = trakt_shows)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct TraktShow {

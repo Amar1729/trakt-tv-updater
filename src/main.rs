@@ -5,6 +5,7 @@ mod sources;
 mod tmdb_reader;
 mod trakt_cache;
 
+use crossbeam::channel::{unbounded, Receiver, Sender};
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::env;
@@ -31,5 +32,10 @@ async fn main() {
 
     // TODO: i'll toss this initial read into a thread (probably will remove tmdb backend)
     // let items = sources::imdb_reader::get_show_vec();
-    let _ = interface::run();
+
+    let (sender_query, receiver_query) = unbounded();
+    let (sender_rows, receiver_rows) = unbounded();
+
+    sources::data_manager(sender_rows, receiver_query);
+    let _ = interface::run(sender_query, receiver_rows);
 }

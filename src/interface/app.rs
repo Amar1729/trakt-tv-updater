@@ -1,7 +1,7 @@
 use std::error;
 
-use crate::{models::TraktShow, sources::imdb_reader};
-use crossbeam::channel::unbounded;
+use crate::models::TraktShow;
+use crossbeam::channel::{Receiver, Sender};
 use ratatui::widgets::{ScrollbarState, TableState};
 use tui_input::Input;
 
@@ -17,10 +17,14 @@ pub enum InputMode {
 }
 
 /// Application.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct App {
     /// Is the application running?
     pub running: bool,
+
+    /// for communication with our data manager.
+    pub sender_query: Sender<String>,
+    pub receiver_rows: Receiver<Vec<TraktShow>>,
 
     /// Is the app accepting input?
     pub input: Input,
@@ -33,22 +37,30 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new() -> Self {
+    pub fn new(s: Sender<String>, r: Receiver<Vec<TraktShow>>) -> Self {
         App {
             running: true,
-            ..Default::default()
+            // removed #[derive(Default)] for App because s/r don't have sane defaults
+            // (is there some builder pattern/crate i can use to reduce this?)
+            sender_query: s,
+            receiver_rows: r,
+
+            input: Input::default(),
+            mode: InputMode::Normal,
+            table_state: TableState::default(),
+            scroll_state: ScrollbarState::default(),
+            items: Vec::new(),
         }
     }
 
     /// Handles the tick event of the terminal.
     pub fn tick(&mut self) {
-        // should i create sender/receiver in new()?
+        // WIP implementation of query from our data rows
+        // (right now, just pull everything on boot)
         if self.items.len() == 0 {
-            let (s, r) = unbounded();
+            self.sender_query.send(String::from("spurious")).unwrap();
 
-            std::thread::spawn(move || s.send(imdb_reader::get_show_vec()).unwrap());
-
-            match r.recv() {
+            match self.receiver_rows.recv() {
                 Ok(items) => {
                     self.scroll_state = self.scroll_state.content_length(items.len() as u16);
                     self.items = items;
