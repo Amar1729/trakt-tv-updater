@@ -8,14 +8,15 @@ use tui_input::Input;
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 /// Different modes for the app.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum InputMode {
+    #[default]
     Normal,
     Editing,
 }
 
 /// Application.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct App {
     /// Is the application running?
     pub running: bool,
@@ -29,25 +30,12 @@ pub struct App {
     pub items: Vec<TraktShow>,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        Self {
-            running: true,
-
-            input: Input::default(),
-            mode: InputMode::Normal,
-            table_state: TableState::default().with_selected(Some(0)),
-            scroll_state: ScrollbarState::default(),
-            items: vec![],
-        }
-    }
-}
-
 impl App {
     /// Constructs a new instance of [`App`].
     pub fn new(items: Vec<TraktShow>) -> Self {
         let mut app = Self::default();
 
+        app.running = true;
         app.scroll_state = app.scroll_state.content_length(items.len() as u16);
         // TODO: i should instead query items from imdb_reader(?) during tick()
         app.items = items;
