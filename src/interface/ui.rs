@@ -2,11 +2,12 @@ use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
     Frame,
 };
 
-use crate::interface::app::App;
+use crate::interface::app::{App, InputMode};
 
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
@@ -28,13 +29,51 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
         ])
     });
 
+    let chunks_textinput = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Length(10), Constraint::Min(1)].as_ref())
+        .split(outer[0]);
+
     // placeholder for now:
     // this will be text input for searching for shows
-    frame.render_widget(
-        Paragraph::new("TODO: Input widget for searching for tv shows")
-            .block(Block::default().borders(Borders::NONE)),
-        outer[0],
-    );
+    let (msg, style) = match app.mode {
+        InputMode::Normal => (vec![Span::raw("Search ")], Style::default()),
+        InputMode::Editing => (
+            vec![Span::styled(
+                "Search > ",
+                Style::default().add_modifier(Modifier::BOLD),
+            )],
+            Style::default(),
+        ),
+    };
+
+    let mut text = Text::from(Line::from(msg));
+    text.patch_style(style);
+    let help_msg = Paragraph::new(text);
+
+    frame.render_widget(help_msg, chunks_textinput[0]);
+
+    {
+        let width = chunks_textinput[1].width.max(3) - 3;
+        let scroll = app.input.visual_scroll(width as usize);
+        let input = Paragraph::new(app.input.value())
+            .style(match app.mode {
+                InputMode::Normal => Style::default(),
+                InputMode::Editing => Style::default().fg(Color::Yellow),
+            })
+            .scroll((0, scroll as u16))
+            .block(Block::default().borders(Borders::NONE));
+
+        frame.render_widget(input, chunks_textinput[1]);
+
+        match app.mode {
+            InputMode::Normal => {}
+            InputMode::Editing => frame.set_cursor(
+                chunks_textinput[1].x + ((app.input.visual_cursor()).max(scroll) - scroll) as u16,
+                chunks_textinput[1].y,
+            ),
+        }
+    }
 
     frame.render_stateful_widget(
         Table::new(rows)

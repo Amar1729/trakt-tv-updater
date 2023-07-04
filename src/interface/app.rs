@@ -2,15 +2,27 @@ use std::error;
 
 use crate::models::TraktShow;
 use ratatui::widgets::{ScrollbarState, TableState};
+use tui_input::Input;
 
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
+
+/// Different modes for the app.
+#[derive(Debug)]
+pub enum InputMode {
+    Normal,
+    Editing,
+}
 
 /// Application.
 #[derive(Debug)]
 pub struct App {
     /// Is the application running?
     pub running: bool,
+
+    /// Is the app accepting input?
+    pub input: Input,
+    pub mode: InputMode,
 
     pub table_state: TableState,
     pub scroll_state: ScrollbarState,
@@ -22,6 +34,8 @@ impl Default for App {
         Self {
             running: true,
 
+            input: Input::default(),
+            mode: InputMode::Normal,
             table_state: TableState::default().with_selected(Some(0)),
             scroll_state: ScrollbarState::default(),
             items: vec![],

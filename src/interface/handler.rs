@@ -1,9 +1,40 @@
-use crate::interface::app::{App, AppResult};
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crate::interface::app::{App, AppResult, InputMode};
+use crossterm::event::{Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::event::{MouseEvent, MouseEventKind};
+
+use tui_input::backend::crossterm::EventHandler;
 
 /// Handles the key events and updates the state of [`App`].
 pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
+    match app.mode {
+        InputMode::Normal => match key_event.code {
+            KeyCode::Tab => {
+                app.mode = InputMode::Editing;
+            }
+            _ => {}
+        },
+        InputMode::Editing => {
+            match key_event.code {
+                KeyCode::Enter => {
+                    // TODO: do something else here? query rows for entered text?
+                    app.mode = InputMode::Normal;
+                }
+                KeyCode::Tab => {
+                    app.mode = InputMode::Normal;
+                }
+                KeyCode::Esc => {
+                    app.mode = InputMode::Normal;
+                }
+                _ => {
+                    app.input.handle_event(&CrosstermEvent::Key(key_event));
+                }
+            };
+
+            // exit early (until i rework handler logic?)
+            return Ok(());
+        }
+    }
+
     match key_event.code {
         // Exit application on `ESC` or `q`
         KeyCode::Esc | KeyCode::Char('q') => {
