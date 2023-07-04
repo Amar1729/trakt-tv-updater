@@ -32,10 +32,10 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             }
         }
         KeyCode::Char('g') => {
-            app.state.select(Some(0));
+            app.table_state.select(Some(0));
         }
         KeyCode::Char('G') => {
-            app.state.select(Some(app.items.len() - 1));
+            app.table_state.select(Some(app.items.len() - 1));
         }
         // Other handlers you could add here.
         _ => {}

@@ -2,7 +2,7 @@ use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Table},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
     Frame,
 };
 
@@ -36,21 +36,13 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
         outer[0],
     );
 
-    // placeholder for now:
-    // this will be a scrollbar once i get the frame stuff working
-    frame.render_widget(Block::default().borders(Borders::LEFT), chunks[1]);
-
     frame.render_stateful_widget(
         Table::new(rows)
             .header(
                 Row::new(vec!["imdb_id", "original_name", "start_year"])
                     .style(Style::default().fg(Color::Yellow)),
             )
-            .block(
-                Block::default()
-                    .title("Shows")
-                    .borders(Borders::ALL ^ Borders::RIGHT),
-            )
+            .block(Block::default().title("Shows").borders(Borders::ALL))
             .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
             .highlight_symbol(">> ")
             .widths(&[
@@ -60,6 +52,15 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
             ])
             .style(Style::default().fg(Color::Cyan).bg(Color::Black)),
         chunks[0],
-        &mut app.state,
+        &mut app.table_state,
+    );
+
+    frame.render_stateful_widget(
+        Scrollbar::default()
+            .orientation(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(Some("↑"))
+            .end_symbol(Some("↓")),
+        outer[1],
+        &mut app.scroll_state,
     )
 }

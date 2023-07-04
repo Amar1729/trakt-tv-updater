@@ -14,8 +14,14 @@ futures = "0.3.28"
 governor = "0.5.1"
 nonzero_ext = "0.3.0"
 polars = { version = "0.30.0", features = ["lazy", "csv", "is_in", "streaming"] }
-ratatui = { version = "0.21.0", features = ["termion", "all-widgets"] }
 reqwest = { version = "0.11.18", features = ["json"] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.99"
 tokio = { version = "1.29.1", features = ["full"] }
+
+[dependencies.ratatui]
+# version = "0.22.0" # on release, switch to this?
+# using git dep directly so we can use scrollbar
+git = "https://github.com/tui-rs-revival/ratatui"
+rev = "2f4413be6e32f27b3fb6adf0945f652bccd2c421"
+features = ["crossterm", "all-widgets"]
