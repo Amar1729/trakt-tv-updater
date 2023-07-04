@@ -1,6 +1,7 @@
 use std::error;
 
-use crate::models::TraktShow;
+use crate::{models::TraktShow, sources::imdb_reader};
+use crossbeam::channel::unbounded;
 use ratatui::widgets::{ScrollbarState, TableState};
 use tui_input::Input;
 
@@ -32,19 +33,30 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new(items: Vec<TraktShow>) -> Self {
-        let mut app = Self::default();
-
-        app.running = true;
-        app.scroll_state = app.scroll_state.content_length(items.len() as u16);
-        // TODO: i should instead query items from imdb_reader(?) during tick()
-        app.items = items;
-
-        app
+    pub fn new() -> Self {
+        App {
+            running: true,
+            ..Default::default()
+        }
     }
 
     /// Handles the tick event of the terminal.
-    pub fn tick(&self) {}
+    pub fn tick(&mut self) {
+        // should i create sender/receiver in new()?
+        if self.items.len() == 0 {
+            let (s, r) = unbounded();
+
+            std::thread::spawn(move || s.send(imdb_reader::get_show_vec()).unwrap());
+
+            match r.recv() {
+                Ok(items) => {
+                    self.scroll_state = self.scroll_state.content_length(items.len() as u16);
+                    self.items = items;
+                }
+                Err(_) => {}
+            }
+        }
+    }
 
     /// Set running to false to quit the application.
     pub fn quit(&mut self) {

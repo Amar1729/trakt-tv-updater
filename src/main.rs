@@ -29,6 +29,7 @@ async fn main() {
     // then main thread could display TUI (but i'll have to handle querying from sqlite?)
     // trakt_cache::hydrate_trakt_from_tmdb(ctx, tmdb_ids).await;
 
-    let items = sources::imdb_reader::get_show_vec();
-    let _ = interface::run(items);
+    // TODO: i'll toss this initial read into a thread (probably will remove tmdb backend)
+    // let items = sources::imdb_reader::get_show_vec();
+    let _ = interface::run();
 }
