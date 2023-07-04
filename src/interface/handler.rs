@@ -79,14 +79,22 @@ pub fn handle_mouse_events(mouse_event: MouseEvent, app: &mut App) -> AppResult<
     match mouse_event.kind {
         MouseEventKind::ScrollDown => {
             app.next(1);
+            app.mode = InputMode::Normal;
         }
         MouseEventKind::ScrollUp => {
             app.prev(1);
+            app.mode = InputMode::Normal;
         }
         // TODO: select a show if clicked
         MouseEventKind::Down(_) => {
             let _col = mouse_event.column;
-            let _row = mouse_event.row;
+            let row = mouse_event.row;
+
+            if row == 0 {
+                app.mode = InputMode::Editing;
+            } else if row > 1 {
+                // ... how do you get offset from table_state?
+            }
         }
         _ => {}
     }
