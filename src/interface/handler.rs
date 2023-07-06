@@ -1,4 +1,4 @@
-use crate::interface::app::{App, AppResult, InputMode};
+use crate::interface::app::{App, AppResult, AppMode};
 use crossterm::event::{Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::event::{MouseEvent, MouseEventKind};
 
@@ -7,23 +7,23 @@ use tui_input::backend::crossterm::EventHandler;
 /// Handles the key events and updates the state of [`App`].
 pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
     match app.mode {
-        InputMode::Normal => match key_event.code {
+        AppMode::MainView => match key_event.code {
             KeyCode::Tab => {
-                app.mode = InputMode::Editing;
+                app.mode = AppMode::Querying;
             }
             _ => {}
         },
-        InputMode::Editing => {
+        AppMode::Querying => {
             match key_event.code {
                 KeyCode::Enter => {
                     // TODO: do something else here? query rows for entered text?
-                    app.mode = InputMode::Normal;
+                    app.mode = AppMode::MainView;
                 }
                 KeyCode::Tab => {
-                    app.mode = InputMode::Normal;
+                    app.mode = AppMode::MainView;
                 }
                 KeyCode::Esc => {
-                    app.mode = InputMode::Normal;
+                    app.mode = AppMode::MainView;
                 }
                 _ => {
                     app.input.handle_event(&CrosstermEvent::Key(key_event));
@@ -32,7 +32,8 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
 
             // exit early (until i rework handler logic?)
             return Ok(());
-        }
+        },
+        _ => unimplemented!(),
     }
 
     match key_event.code {
@@ -66,7 +67,7 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             app.table_state.select(Some(0));
         }
         KeyCode::Char('G') => {
-            app.table_state.select(Some(app.items.len() - 1));
+            app.table_state.select(Some(app.shows.len() - 1));
         }
         // Other handlers you could add here.
         _ => {}
@@ -79,11 +80,11 @@ pub fn handle_mouse_events(mouse_event: MouseEvent, app: &mut App) -> AppResult<
     match mouse_event.kind {
         MouseEventKind::ScrollDown => {
             app.next(1);
-            app.mode = InputMode::Normal;
+            app.mode = AppMode::MainView;
         }
         MouseEventKind::ScrollUp => {
             app.prev(1);
-            app.mode = InputMode::Normal;
+            app.mode = AppMode::MainView;
         }
         // TODO: select a show if clicked
         MouseEventKind::Down(_) => {
@@ -91,7 +92,7 @@ pub fn handle_mouse_events(mouse_event: MouseEvent, app: &mut App) -> AppResult<
             let row = mouse_event.row;
 
             if row == 0 {
-                app.mode = InputMode::Editing;
+                app.mode = AppMode::Querying;
             } else if row > 1 {
                 // ... how do you get offset from table_state?
             }

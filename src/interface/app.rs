@@ -10,10 +10,21 @@ pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 /// Different modes for the app.
 #[derive(Debug, Default)]
-pub enum InputMode {
+pub enum AppMode {
+    /// Various tasks to init the app (e.g. data pull + insert)
     #[default]
-    Normal,
-    Editing,
+    Initializing,
+    /// List of all the shows we find (from IMDB dataset / loaded from DB)
+    MainView,
+    /// somewhat of a todo state, i haven't impl'd searching yet
+    Querying,
+    /// Show keybindings
+    HelpWindow,
+    /// Detailed view of specific season
+    SeasonView,
+    // Detailed view of a specific episode
+    // not sure about this one yet
+    // EpisodeView,
 }
 
 /// Application.
@@ -26,13 +37,14 @@ pub struct App {
     pub sender_query: Sender<String>,
     pub receiver_rows: Receiver<Vec<TraktShow>>,
 
-    /// Is the app accepting input?
-    pub input: Input,
-    pub mode: InputMode,
+    /// ui+handling changes based on the app's current view
+    pub mode: AppMode,
 
+    /// used in main view
+    pub input: Input,
     pub table_state: TableState,
     pub scroll_state: ScrollbarState,
-    pub items: Vec<TraktShow>,
+    pub shows: Vec<TraktShow>,
 }
 
 impl App {
@@ -46,10 +58,10 @@ impl App {
             receiver_rows: r,
 
             input: Input::default(),
-            mode: InputMode::Normal,
+            mode: AppMode::default(),
             table_state: TableState::default(),
             scroll_state: ScrollbarState::default(),
-            items: Vec::new(),
+            shows: Vec::new(),
         }
     }
 
@@ -57,13 +69,13 @@ impl App {
     pub fn tick(&mut self) {
         // WIP implementation of query from our data rows
         // (right now, just pull everything on boot)
-        if self.items.len() == 0 {
+        if self.shows.len() == 0 {
             self.sender_query.send(String::from("spurious")).unwrap();
 
             match self.receiver_rows.recv() {
                 Ok(items) => {
                     self.scroll_state = self.scroll_state.content_length(items.len() as u16);
-                    self.items = items;
+                    self.shows = items;
                 }
                 Err(_) => {}
             }
@@ -77,7 +89,7 @@ impl App {
 
     pub fn next(&mut self, step: usize) {
         let i = match self.table_state.selected() {
-            Some(i) => std::cmp::min(i + step, self.items.len() - 1),
+            Some(i) => std::cmp::min(i + step, self.shows.len() - 1),
             None => 0,
         };
         self.table_state.select(Some(i));
@@ -87,7 +99,7 @@ impl App {
     pub fn prev(&mut self, step: usize) {
         let i = match self.table_state.selected() {
             Some(i) => std::cmp::max(i as i32 - step as i32, 0) as usize,
-            None => self.items.len() - 1,
+            None => self.shows.len() - 1,
         };
         self.table_state.select(Some(i));
         self.scroll_state = self.scroll_state.position(i as u16);
