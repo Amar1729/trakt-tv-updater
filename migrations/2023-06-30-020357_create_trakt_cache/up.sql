@@ -1,7 +1,6 @@
 CREATE TABLE trakt_shows (
     imdb_id VARCHAR PRIMARY KEY NOT NULL,
     trakt_id INTEGER,
-    tmdb_id INTEGER,
     primary_title VARCHAR NOT NULL,
     original_title VARCHAR NOT NULL,
     country VARCHAR,

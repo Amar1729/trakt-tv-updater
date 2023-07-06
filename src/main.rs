@@ -2,7 +2,6 @@ mod interface;
 mod models;
 mod schema;
 mod sources;
-mod tmdb_reader;
 mod trakt_cache;
 
 use crossbeam::channel::unbounded;
@@ -27,10 +26,6 @@ async fn main() {
     //     .into_iter()
     //     .map(|show| show.id)
     //     .collect();
-
-    // TODO: this can run on a background thread
-    // then main thread could display TUI (but i'll have to handle querying from sqlite?)
-    // trakt_cache::hydrate_trakt_from_tmdb(ctx, tmdb_ids).await;
 
     // TODO: i'll toss this initial read into a thread (probably will remove tmdb backend)
     // let items = sources::imdb_reader::get_show_vec();

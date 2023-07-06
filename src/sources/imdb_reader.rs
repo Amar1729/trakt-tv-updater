@@ -87,7 +87,6 @@ pub fn get_show_vec() -> Vec<TraktShow> {
         items.push(TraktShow {
             imdb_id: j_row.tconst,
             trakt_id: None,
-            tmdb_id: None,
             primary_title: j_row.primary_title.unwrap(),
             original_title: j_row.original_title.unwrap(),
             release_year: Some(j_row.start_year.unwrap() as i32),

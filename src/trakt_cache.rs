@@ -21,10 +21,8 @@ const TIME_STEP: time::Duration = time::Duration::from_millis(100);
 struct ApiIDs {
     trakt: u32,
     slug: String,
-    tvdb: Option<u32>,
     imdb: Option<String>,
-    tmdb: u32,
-    tvrage: Option<u32>,
+    // skipping other unimportant IDs
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -80,9 +78,9 @@ pub fn write_trakt_db(ctx: &mut SqliteConnection, show: ApiShow) -> TraktShow {
     // should be a sql query that does insert or instead?
     //
     // insert into trakt_shows (
-    //     id, tmdb_id, name, release_year
+    //     id, imdb_id, name, release_year
     // )
-    //     select 11, 11, 'Fake Show', 0
+    //     select 11, 'tt0011', 'Fake Show', 0
     // where not EXISTS (
     //     select * from trakt_shows where id = 11)
     if let Some(local_result) = query_trakt_db(ctx, show.ids.trakt as i32) {
@@ -95,7 +93,6 @@ pub fn write_trakt_db(ctx: &mut SqliteConnection, show: ApiShow) -> TraktShow {
     // however, if our initial data is from IMDB, then primary key as imdb id makes sense.
     let new_show = TraktShow {
         trakt_id: Some(show.ids.trakt as i32),
-        tmdb_id: Some(show.ids.tmdb as i32),
         imdb_id: show.ids.imdb.unwrap(),
         primary_title: show.title.clone(),
         original_title: show.title,
@@ -116,8 +113,8 @@ pub fn write_trakt_db(ctx: &mut SqliteConnection, show: ApiShow) -> TraktShow {
         .expect("err saving new trakt_show")
 }
 
-pub async fn query_trakt_api(client: &reqwest::Client, tmdb_id: u32) -> Vec<ApiShow> {
-    let search_url = format!("http://127.0.0.1:8080/search/{}", tmdb_id);
+pub async fn query_trakt_api(client: &reqwest::Client, imdb_id: u32) -> Vec<ApiShow> {
+    let search_url = format!("http://127.0.0.1:8080/search/imdb/{}", imdb_id);
 
     let response = client.get(search_url).send().await.unwrap();
 
@@ -146,7 +143,7 @@ pub async fn query_trakt_api(client: &reqwest::Client, tmdb_id: u32) -> Vec<ApiS
     }
 }
 
-pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u32>) {
+pub async fn fill_trakt_db_from_imdb(ctx: &mut SqliteConnection, imdb_id: u32) {
     let mut headers = header::HeaderMap::new();
     headers.insert(
         "Content-Type",
@@ -154,6 +151,10 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
     );
     headers.insert("Authorization", header::HeaderValue::from_static("token"));
 
+    // TOOD: i guess we should create this client outside somewhere?
+    // and then reuse it for any request the app makes when we query for a show
+    // if we move over to making all requests from the app, we may able to remove the rate limiting
+    // (on our side) since that might be too slow to exceed limits
     let client = reqwest::Client::builder()
         .user_agent(APP_USER_AGENT)
         .default_headers(headers)
@@ -161,28 +162,6 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
         .unwrap();
 
     let lim = RateLimiter::direct(Quota::per_second(nonzero!(RATE_LIMIT)));
-
-    // let mut shows: Vec<TraktShow> = vec![];
-    for tmdb_id in tmdb_ids {
-        // check if tmdb_id is in local database
-        // if tmdb_id is not in our local db, we have to query the API
-        if let Some(tmdb_rows) = trakt_shows::table
-            .filter(trakt_shows::tmdb_id.eq(tmdb_id as i32))
-            .select(TraktShow::as_select())
-            .load(ctx)
-            .optional()
-            .unwrap()
-        {
-            if tmdb_rows.len() > 0 {
-                println!(
-                    "found tmdb rows: {} {}",
-                    tmdb_rows.len(),
-                    tmdb_rows[0].original_title
-                );
-                // shows.append(tmdb_rows);
-                continue;
-            }
-        }
 
         // TODO - change this function to just hydrate_trakt
         // we'll hydrate from IMDB first (and maybe remove tmdb entirely?)
@@ -192,14 +171,16 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
         // until_ready should block until the limiter is ready to submit another job, right?
         // but it doesn't, so instead i'm doing this wacky loop{} construction
         // lim.until_ready().await;
+        //
+        // keeping this around so i remember how to use it
         loop {
             match lim.check() {
                 Ok(_) => {
-                    for api_show in query_trakt_api(&client, tmdb_id).await {
-                        println!("querying...");
-                        // shows.push(api_show)
-                        write_trakt_db(ctx, api_show);
-                    }
+                    // for api_show in query_trakt_api(&client, tmdb_id).await {
+                    //     println!("querying...");
+                    //     // shows.push(api_show)
+                    //     write_trakt_db(ctx, api_show);
+                    // }
 
                     break;
                 }
@@ -208,7 +189,11 @@ pub async fn hydrate_trakt_from_tmdb(ctx: &mut SqliteConnection, tmdb_ids: Vec<u
 
             thread::sleep(TIME_STEP);
         }
-    }
+
+    // this code isn't fully impl'd right now - panic if it's called
+    // we'll finalize it once i figure out the right way to poll data from trakt
+    // and fill our db
+    unimplemented!();
 }
 
 mod tests {

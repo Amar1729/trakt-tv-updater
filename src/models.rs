@@ -8,7 +8,6 @@ use diesel::prelude::*;
 pub struct TraktShow {
     pub imdb_id: String,
     pub trakt_id: Option<i32>,
-    pub tmdb_id: Option<i32>,
     pub primary_title: String,
     pub original_title: String,
     pub country: Option<String>,
