@@ -8,7 +8,9 @@ mod trakt_cache;
 use crossbeam::channel::unbounded;
 use diesel::prelude::*;
 use dotenvy::dotenv;
-use std::env;
+use log::*;
+use simplelog::*;
+use std::{env, fs::File};
 
 fn establish_ctx() -> SqliteConnection {
     dotenv().ok();
@@ -32,6 +34,14 @@ async fn main() {
 
     // TODO: i'll toss this initial read into a thread (probably will remove tmdb backend)
     // let items = sources::imdb_reader::get_show_vec();
+
+    // init logging
+    WriteLogger::init(
+        LevelFilter::Debug,
+        Config::default(),
+        File::create("trakt_updater.log").unwrap(),
+    )
+    .unwrap();
 
     let (sender_query, receiver_query) = unbounded();
     let (sender_rows, receiver_rows) = unbounded();
