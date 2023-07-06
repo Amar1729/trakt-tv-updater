@@ -1,4 +1,4 @@
-use crossbeam::channel::{Receiver, Sender};
+use crossbeam::channel::{Receiver, RecvError, Sender};
 
 use crate::models::TraktShow;
 
@@ -24,8 +24,14 @@ pub fn data_manager(sender: Sender<Vec<TraktShow>>, receiver: Receiver<String>) 
         // TODO: figure out whatever's the right way to handle these errors
         //   (i think i want to close the app if the receiver shuts down?)
         loop {
-            let _query = receiver.recv().unwrap();
-            sender.send(items.clone()).unwrap();
+            match receiver.recv() {
+                Ok(_query) => {
+                    sender.send(items.clone()).unwrap();
+                }
+                // happens when channel is empty + becomes disconnected
+                // i think this only happens when user shuts down app
+                Err(RecvError) => {}
+            }
         }
     });
 }

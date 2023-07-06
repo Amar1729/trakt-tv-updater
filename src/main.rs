@@ -5,7 +5,7 @@ mod sources;
 mod tmdb_reader;
 mod trakt_cache;
 
-use crossbeam::channel::{unbounded, Receiver, Sender};
+use crossbeam::channel::unbounded;
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::env;
