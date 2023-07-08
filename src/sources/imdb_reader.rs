@@ -106,7 +106,7 @@ pub fn load_show_vec() -> Vec<TraktShow> {
             no_episodes: None,
             country: None,
             network: None,
-            user_status: "TODO".to_string(),
+            user_status: crate::models::UserStatus::Todo,
         });
     }
 

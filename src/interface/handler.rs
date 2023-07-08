@@ -50,6 +50,8 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             KeyCode::Tab => {
                 app.mode = AppMode::Querying;
             }
+            // cycle through watch status for a show
+            KeyCode::Char(' ') => app.toggle_watch_status(),
             _ => {}
         },
         AppMode::Querying => match key_event.code {

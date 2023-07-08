@@ -1,6 +1,9 @@
 use std::error;
 
-use crate::models::TraktShow;
+use crate::{
+    models::{TraktShow, UserStatus},
+    trakt_cache,
+};
 use crossbeam::channel::{unbounded, Receiver, SendError, Sender};
 use log::*;
 use ratatui::widgets::{ScrollbarState, TableState};
@@ -122,5 +125,22 @@ impl App {
         };
         self.table_state.select(Some(i));
         self.scroll_state = self.scroll_state.position(i as u16);
+    }
+
+    /// Cycle watch status of a currently-selected show in main window
+    pub fn toggle_watch_status(&mut self) {
+        if let Some(i) = self.table_state.selected() {
+            let mut show = &mut self.shows[i];
+            info!("Currently selected show: {:?}", show);
+
+            show.user_status = match show.user_status {
+                UserStatus::Todo => UserStatus::Watched,
+                UserStatus::Watched => UserStatus::Unwatched,
+                UserStatus::Unwatched => UserStatus::Todo,
+            };
+
+            // update db
+            trakt_cache::update_show(show);
+        }
     }
 }

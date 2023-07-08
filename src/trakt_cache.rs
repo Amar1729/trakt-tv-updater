@@ -116,7 +116,7 @@ pub fn write_trakt_db(ctx: &mut SqliteConnection, show: ApiShow) -> TraktShow {
         network: None,
         no_seasons: None,
         no_episodes: None,
-        user_status: "TODO".to_string(),
+        user_status: crate::models::UserStatus::Todo,
     };
 
     diesel::insert_into(trakt_shows::table)
@@ -152,6 +152,29 @@ pub async fn query_trakt_api(client: &reqwest::Client, imdb_id: u32) -> Vec<ApiS
         }
         _ => {
             panic!("panic")
+        }
+    }
+}
+
+/// update the status of a show
+pub fn update_show(show: &TraktShow) {
+    use self::trakt_shows::dsl::*;
+
+    let mut ctx = establish_ctx();
+
+    match diesel::insert_into(trakt_shows)
+        .values(show)
+        .returning(TraktShow::as_returning())
+        .on_conflict(imdb_id)
+        .do_update()
+        .set(user_status.eq(&show.user_status))
+        .execute(&mut ctx)
+    {
+        Ok(_) => {
+            info!("Updated row: {}", &show.imdb_id);
+        }
+        Err(err) => {
+            info!("panik on update: {}", err);
         }
     }
 }

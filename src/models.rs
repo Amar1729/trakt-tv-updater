@@ -2,7 +2,30 @@ use super::schema::trakt_shows;
 
 use diesel::prelude::*;
 
-#[derive(Clone, Debug, AsChangeset, Queryable, Selectable, Insertable)]
+#[derive(Clone, Debug, PartialEq, diesel_derive_enum::DbEnum)]
+pub enum UserStatus {
+    Unwatched,
+    Todo,
+    Watched,
+}
+
+impl From<UserStatus> for ratatui::text::Text<'_> {
+    fn from(value: UserStatus) -> Self {
+        match value {
+            UserStatus::Unwatched => Self {
+                lines: vec![ratatui::text::Line::from("UNWATCHED".to_string())],
+            },
+            UserStatus::Todo => Self {
+                lines: vec![ratatui::text::Line::from("TODO".to_string())],
+            },
+            UserStatus::Watched => Self {
+                lines: vec![ratatui::text::Line::from("WATCHED".to_string())],
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug, Queryable, Selectable, Insertable, PartialEq)]
 #[diesel(table_name = trakt_shows)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct TraktShow {
@@ -15,5 +38,5 @@ pub struct TraktShow {
     pub network: Option<String>,
     pub no_seasons: Option<i32>,
     pub no_episodes: Option<i32>,
-    pub user_status: String,
+    pub user_status: UserStatus,
 }

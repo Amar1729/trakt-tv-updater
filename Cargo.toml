@@ -10,6 +10,7 @@ chrono = { version = "0.4.26", default-features = false, features = ["clock", "s
 crossbeam = { version = "0.8.2", features = ["crossbeam-channel"] }
 crossterm = "0.26.1"
 diesel = { version = "2.1.0", features = ["sqlite", "chrono", "returning_clauses_for_sqlite_3_35"] }
+diesel-derive-enum = { version = "2.1.0", features = ["sqlite"] }
 dotenvy = "0.15.7"
 futures = "0.3.28"
 governor = "0.5.1"
