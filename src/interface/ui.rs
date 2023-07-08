@@ -112,10 +112,23 @@ fn render_main_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
     render_shows_table(app, frame, outer[1]);
 }
 
+fn initalize_app<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
+    // doesn't really do anything yet.
+    let widget = Paragraph::new("Initializing ...")
+        .style(Style::default())
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().fg(Color::Gray)),
+        );
+
+    frame.render_widget(widget, frame.size())
+}
+
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
     match app.mode {
-        AppMode::Initializing => unimplemented!(),
+        AppMode::Initializing => initalize_app(app, frame),
         AppMode::MainView => render_main_view(app, frame),
         AppMode::Querying => render_main_view(app, frame),
         AppMode::HelpWindow => unimplemented!(),
