@@ -18,11 +18,17 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
                     app.quit();
                 }
             }
-            KeyCode::Up => {
+            KeyCode::Char('k') | KeyCode::Up => {
                 app.prev(1);
             }
-            KeyCode::Down => {
+            KeyCode::Char('j') | KeyCode::Down => {
                 app.next(1);
+            }
+            KeyCode::PageUp => {
+                app.prev(20);
+            }
+            KeyCode::PageDown => {
+                app.next(20);
             }
             KeyCode::Char('u') | KeyCode::Char('U') => {
                 if key_event.modifiers == KeyModifiers::CONTROL {
