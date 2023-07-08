@@ -163,10 +163,14 @@ pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
         diesel::insert_into(trakt_shows)
             .values(row)
             .returning(TraktShow::as_returning())
-            // .on_conflict_do_nothing()
             .on_conflict(imdb_id)
             .do_update()
-            .set(row)
+            // update the values that might be updated in a new data dump
+            .set((
+                release_year.eq(&row.release_year),
+                no_seasons.eq(&row.no_seasons),
+                no_episodes.eq(&row.no_episodes),
+            ))
             .execute(ctx)
             .expect("done");
     }
