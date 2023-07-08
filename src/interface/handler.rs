@@ -7,14 +7,6 @@ use tui_input::backend::crossterm::EventHandler;
 /// Handles the key events and updates the state of [`App`].
 pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
     match app.mode {
-        // right now, Initializing doesnt do anything
-        // fill out a dumb way to get from init->main while testing, change this later.
-        AppMode::Initializing => match key_event.code {
-            KeyCode::Char('q') => {
-                app.mode = AppMode::MainView;
-            }
-            _ => {}
-        },
         AppMode::MainView => match key_event.code {
             // Exit application on `ESC` or `q`
             KeyCode::Esc | KeyCode::Char('q') => {

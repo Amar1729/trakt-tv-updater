@@ -3,7 +3,10 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table},
+    widgets::{
+        Block, BorderType, Borders, Cell, Gauge, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        Table,
+    },
     Frame,
 };
 
@@ -113,16 +116,56 @@ fn render_main_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
 }
 
 fn initalize_app<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
-    // doesn't really do anything yet.
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints(
+            [
+                Constraint::Percentage(12),
+                Constraint::Min(0),
+                Constraint::Percentage(12),
+            ]
+            .as_ref(),
+        )
+        .split(frame.size());
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                // empty space
+                Constraint::Length(2),
+                // "Initializing..."
+                Constraint::Length(4),
+                // progress bar
+                Constraint::Length(4),
+                // rest of space
+                Constraint::Min(0),
+            ]
+            .as_ref(),
+        )
+        .split(chunks[1]);
+
     let widget = Paragraph::new("Initializing ...")
         .style(Style::default())
         .block(
             Block::default()
+                .border_type(BorderType::Rounded)
                 .borders(Borders::ALL)
                 .style(Style::default().fg(Color::Gray)),
         );
 
-    frame.render_widget(widget, frame.size())
+    frame.render_widget(widget, chunks[1]);
+
+    // doesn't actually track progress of initialization yet.
+    // i load all items at once on startup.
+    let progress = Gauge::default().percent(0).block(
+        Block::default()
+            .border_type(BorderType::Rounded)
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::Gray)),
+    );
+
+    frame.render_widget(progress, chunks[2])
 }
 
 /// Renders the user interface widgets.

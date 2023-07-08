@@ -10,7 +10,7 @@ use tui_input::Input;
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 /// Different modes for the app.
-#[derive(Debug, Default)]
+#[derive(PartialEq, Eq, Debug, Default)]
 pub enum AppMode {
     /// Various tasks to init the app (e.g. data pull + insert)
     #[default]
@@ -91,6 +91,10 @@ impl App {
                 Ok(items) => {
                     self.scroll_state = self.scroll_state.content_length(items.len() as u16);
                     self.shows = items;
+
+                    if self.mode == AppMode::Initializing {
+                        self.mode = AppMode::MainView;
+                    }
                 }
                 Err(_) => {}
             }
