@@ -1,3 +1,4 @@
+use chrono::prelude::*;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -26,6 +27,9 @@ fn load_imdb_shows() -> DataFrame {
     let mut schema = Schema::new();
     schema.with_column("endYear".to_string().into(), DataType::Int64);
 
+    // hope this doesn't be weird if someone runs it on dec 31
+    let cap_year = Utc::now().year() + 1;
+
     let q = LazyCsvReader::new(fname)
         .has_header(true)
         .with_delimiter("\t".as_bytes()[0])
@@ -46,7 +50,8 @@ fn load_imdb_shows() -> DataFrame {
             // you should be able to do is_in here but i couldn't figure out the syntax?
             col("titleType")
                 .eq(lit("tvSeries"))
-                .or(col("titleType").eq(lit("tvMiniSeries"))),
+                .or(col("titleType").eq(lit("tvMiniSeries")))
+                .and(col("startYear").lt(lit(cap_year))),
         )
         .select(&[
             col("tconst"),
