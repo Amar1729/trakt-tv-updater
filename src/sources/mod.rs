@@ -1,6 +1,7 @@
 use crossbeam::channel::{Receiver, RecvError, Sender};
 
 use crate::models::TraktShow;
+use crate::trakt_cache;
 
 pub mod imdb_reader;
 
@@ -17,16 +18,17 @@ pub mod imdb_reader;
 /// A reader that reads data and then waits to respond to queries.
 pub fn data_manager(sender: Sender<Vec<TraktShow>>, receiver: Receiver<String>) {
     std::thread::spawn(move || {
-        let items = imdb_reader::get_show_vec();
+        let mut ctx = trakt_cache::establish_ctx();
+        let items = imdb_reader::load_show_vec();
 
-        // TODO: use proper logging
-        // TODO: actually use incoming query
-        // TODO: figure out whatever's the right way to handle these errors
-        //   (i think i want to close the app if the receiver shuts down?)
         loop {
             match receiver.recv() {
                 Ok(_query) => {
+                    // TODO: can i pass this as a ref instead of cloning?
                     sender.send(items.clone()).unwrap();
+
+                    // TODO: only do this once, on starting this function?
+                    trakt_cache::prefill_db_from_imdb(&mut ctx, &items);
                 }
                 // happens when channel is empty + becomes disconnected
                 // i think this only happens when user shuts down app

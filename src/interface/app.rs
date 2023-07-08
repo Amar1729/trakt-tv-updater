@@ -1,7 +1,8 @@
 use std::error;
 
 use crate::models::TraktShow;
-use crossbeam::channel::{unbounded, Receiver, Sender};
+use crossbeam::channel::{unbounded, Receiver, SendError, Sender};
+use log::*;
 use ratatui::widgets::{ScrollbarState, TableState};
 use tui_input::Input;
 
@@ -78,7 +79,13 @@ impl App {
         // WIP implementation of query from our data rows
         // (right now, just pull everything on boot)
         if self.shows.len() == 0 {
-            self.sender_query.send(String::from("spurious")).unwrap();
+            match self.sender_query.send(String::from("spurious")) {
+                Ok(_) => {}
+                Err(SendError(err)) => {
+                    info!("discon {}", err);
+                    self.quit();
+                }
+            }
 
             match self.receiver_rows.recv() {
                 Ok(items) => {

@@ -4,9 +4,11 @@
 use crate::models::TraktShow;
 use crate::schema::trakt_shows;
 
-use std::{thread, time};
+use log::*;
+use std::{env, thread, time};
 
 use diesel::prelude::*;
+use dotenvy::dotenv;
 use governor::{Quota, RateLimiter};
 use nonzero_ext::*;
 use reqwest::header;
@@ -43,6 +45,16 @@ pub struct ApiMatch {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ApiResponse {
     pub results: Vec<ApiMatch>,
+}
+
+pub fn establish_ctx() -> SqliteConnection {
+    dotenv().ok();
+
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
+    SqliteConnection::establish(&database_url).unwrap_or_else(|err| {
+        info!("{}", err);
+        panic!();
+    })
 }
 
 pub fn read_trakt_db(ctx: &mut SqliteConnection) {
@@ -140,6 +152,23 @@ pub async fn query_trakt_api(client: &reqwest::Client, imdb_id: u32) -> Vec<ApiS
         _ => {
             panic!("panic")
         }
+    }
+}
+
+/// Overwrites (or fills) db with the rows parsed from an IMDB data dump.
+pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
+    use self::trakt_shows::dsl::*;
+
+    for row in rows {
+        diesel::insert_into(trakt_shows)
+            .values(row)
+            .returning(TraktShow::as_returning())
+            // .on_conflict_do_nothing()
+            .on_conflict(imdb_id)
+            .do_update()
+            .set(row)
+            .execute(ctx)
+            .expect("done");
     }
 }
 

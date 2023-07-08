@@ -19,7 +19,8 @@ struct ImdbShow {
     pub end_year: Option<i64>,
 }
 
-pub fn tv_show_ids() -> DataFrame {
+/// Read shows from IMDB data dump
+fn load_imdb_shows() -> DataFrame {
     let fname = "./title.basics.short.tsv";
 
     let mut schema = Schema::new();
@@ -55,11 +56,14 @@ pub fn tv_show_ids() -> DataFrame {
             col("endYear"),
         ]);
 
+    // this function currently returns a DataFrame. however, if we wanted to optimize
+    // i think we could instead return a LazyDataFrame and stream chunks over the mpsc
+    // channel (would probably want to stop sorting if we do that?)
     q.with_streaming(true).collect().unwrap()
 }
 
-pub fn get_show_vec() -> Vec<TraktShow> {
-    let df = tv_show_ids().head(Some(100));
+pub fn load_show_vec() -> Vec<TraktShow> {
+    let df = load_imdb_shows().head(Some(100));
 
     let fields = df.get_columns();
     let columns: Vec<&str> = fields.iter().map(|x| x.name()).collect();
