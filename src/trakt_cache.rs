@@ -116,6 +116,7 @@ pub fn write_trakt_db(ctx: &mut SqliteConnection, show: ApiShow) -> TraktShow {
         network: None,
         no_seasons: None,
         no_episodes: None,
+        user_status: "TODO".to_string(),
     };
 
     diesel::insert_into(trakt_shows::table)

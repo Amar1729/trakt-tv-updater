@@ -11,5 +11,6 @@ diesel::table! {
         network -> Nullable<Text>,
         no_seasons -> Nullable<Integer>,
         no_episodes -> Nullable<Integer>,
+        user_status -> Text,
     }
 }

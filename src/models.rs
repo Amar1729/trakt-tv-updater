@@ -15,4 +15,5 @@ pub struct TraktShow {
     pub network: Option<String>,
     pub no_seasons: Option<i32>,
     pub no_episodes: Option<i32>,
+    pub user_status: String,
 }

@@ -75,14 +75,20 @@ fn render_shows_table<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>, area:
                 Some(yy) => yy.to_string(),
                 None => "<unreleased>".to_string(),
             }),
+            Cell::from(show.user_status.clone()),
         ])
     });
 
     frame.render_stateful_widget(
         Table::new(rows)
             .header(
-                Row::new(vec!["imdb_id", "original_name", "start_year"])
-                    .style(Style::default().fg(Color::Yellow)),
+                Row::new(vec![
+                    "imdb_id",
+                    "original_name",
+                    "start_year",
+                    "user_status",
+                ])
+                .style(Style::default().fg(Color::Yellow)),
             )
             .block(Block::default().title("Shows").borders(Borders::ALL))
             .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
@@ -91,6 +97,7 @@ fn render_shows_table<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>, area:
                 Constraint::Length(12),
                 Constraint::Length(35),
                 Constraint::Length(13),
+                Constraint::Length(12),
             ])
             .style(Style::default().fg(Color::Cyan).bg(Color::Black)),
         chunks[0],

@@ -7,5 +7,6 @@ CREATE TABLE trakt_shows (
     release_year INTEGER,
     network VARCHAR,
     no_seasons INTEGER,
-    no_episodes INTEGER
+    no_episodes INTEGER,
+    user_status TEXT CHECK(user_status IN ('unwatched', 'todo', 'watched')) NOT NULL
 )
