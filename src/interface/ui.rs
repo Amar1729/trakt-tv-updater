@@ -71,7 +71,10 @@ fn render_shows_table<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>, area:
         Row::new(vec![
             Cell::from(show.imdb_id.as_str()),
             Cell::from(show.original_title.clone()),
-            Cell::from(show.release_year.unwrap().to_string()),
+            Cell::from(match show.release_year {
+                Some(yy) => yy.to_string(),
+                None => "<unreleased>".to_string(),
+            }),
         ])
     });
 
@@ -87,7 +90,7 @@ fn render_shows_table<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>, area:
             .widths(&[
                 Constraint::Length(12),
                 Constraint::Length(35),
-                Constraint::Length(10),
+                Constraint::Length(13),
             ])
             .style(Style::default().fg(Color::Cyan).bg(Color::Black)),
         chunks[0],

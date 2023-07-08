@@ -93,7 +93,10 @@ pub fn load_show_vec() -> Vec<TraktShow> {
             trakt_id: None,
             primary_title: j_row.primary_title.unwrap(),
             original_title: j_row.original_title.unwrap(),
-            release_year: Some(j_row.start_year.unwrap() as i32),
+            release_year: match j_row.start_year {
+                Some(expr) => Some(expr as i32),
+                None => None,
+            },
             no_seasons: None,
             no_episodes: None,
             country: None,
