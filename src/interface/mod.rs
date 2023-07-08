@@ -13,23 +13,19 @@ mod tui;
 /// Event handler.
 mod handler;
 
-use crate::{
-    interface::{
-        app::{App, AppResult},
-        event::{Event, EventHandler},
-        handler::{handle_key_events, handle_mouse_events},
-        tui::Tui,
-    },
-    models::TraktShow,
+use crate::interface::{
+    app::{App, AppResult},
+    event::{Event, EventHandler},
+    handler::{handle_key_events, handle_mouse_events},
+    tui::Tui,
 };
-use crossbeam::channel::{Receiver, Sender};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
 
-pub fn run(s: Sender<String>, r: Receiver<Vec<TraktShow>>) -> AppResult<()> {
+pub fn run() -> AppResult<()> {
     // Create an application.
-    let mut app = App::new(s, r);
+    let mut app = App::new();
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());

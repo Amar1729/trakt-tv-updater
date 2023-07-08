@@ -4,7 +4,6 @@ mod schema;
 mod sources;
 mod trakt_cache;
 
-use crossbeam::channel::unbounded;
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use log::*;
@@ -38,9 +37,5 @@ async fn main() {
     )
     .unwrap();
 
-    let (sender_query, receiver_query) = unbounded();
-    let (sender_rows, receiver_rows) = unbounded();
-
-    sources::data_manager(sender_rows, receiver_query);
-    let _ = interface::run(sender_query, receiver_rows);
+    let _ = interface::run();
 }

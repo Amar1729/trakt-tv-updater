@@ -1,7 +1,7 @@
 use std::error;
 
 use crate::models::TraktShow;
-use crossbeam::channel::{Receiver, Sender};
+use crossbeam::channel::{unbounded, Receiver, Sender};
 use ratatui::widgets::{ScrollbarState, TableState};
 use tui_input::Input;
 
@@ -49,13 +49,21 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new(s: Sender<String>, r: Receiver<Vec<TraktShow>>) -> Self {
+    pub fn new() -> Self {
+        // i think these both actually could be len0
+        let (sq, receiver_query) = unbounded();
+        let (sender_rows, rr) = unbounded();
+
+        // when a new app is created, begin a bg data manager task
+        // this task will receive a string query, and send back a TraktShow vec
+        crate::sources::data_manager(sender_rows, receiver_query);
+
         App {
             running: true,
             // removed #[derive(Default)] for App because s/r don't have sane defaults
             // (is there some builder pattern/crate i can use to reduce this?)
-            sender_query: s,
-            receiver_rows: r,
+            sender_query: sq,
+            receiver_rows: rr,
 
             input: Input::default(),
             mode: AppMode::default(),
