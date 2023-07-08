@@ -157,10 +157,12 @@ pub async fn query_trakt_api(client: &reqwest::Client, imdb_id: u32) -> Vec<ApiS
 
 /// Overwrites (or fills) db with the rows parsed from an IMDB data dump.
 pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
+    info!("Filling db...");
+
     use self::trakt_shows::dsl::*;
 
     for row in rows {
-        diesel::insert_into(trakt_shows)
+        match diesel::insert_into(trakt_shows)
             .values(row)
             .returning(TraktShow::as_returning())
             .on_conflict(imdb_id)
@@ -172,7 +174,16 @@ pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
                 no_episodes.eq(&row.no_episodes),
             ))
             .execute(ctx)
-            .expect("done");
+        {
+            Ok(_c) => {
+                // can i count only which rows were updated?
+            }
+            Err(err) => {
+                // TODO: if this errs, should bubble up and quit app?
+                info!("Failed db insert: {}", err);
+                panic!();
+            }
+        }
     }
 }
 
