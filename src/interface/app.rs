@@ -145,7 +145,7 @@ impl App {
     /// Cycle watch status of a currently-selected show in main window
     pub fn toggle_watch_status(&mut self) {
         if let Some(i) = self.table_state.selected() {
-            let mut show = &mut self.shows[i];
+            let show = &mut self.shows[i];
             info!("Currently selected show: {:?}", show);
 
             show.user_status = match show.user_status {
