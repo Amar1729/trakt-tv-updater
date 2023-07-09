@@ -4,7 +4,7 @@ mod interface;
 mod models;
 mod schema;
 mod sources;
-mod trakt_cache;
+mod trakt;
 
 use log::*;
 use simplelog::*;

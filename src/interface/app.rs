@@ -2,7 +2,7 @@ use std::error;
 
 use crate::{
     models::{TraktShow, UserStatus},
-    trakt_cache::{self, ApiSeasonDetails, ApiShowDetails},
+    trakt::{t_api, t_db},
 };
 use crossbeam::channel::{unbounded, Receiver, SendError, Sender};
 use log::*;
@@ -57,8 +57,8 @@ pub struct App {
     // used in season view
     // TODO(?) maybe this should be a nested stuct, only relevant for season view?
     // similar with the stuff required by main view and eventual episode view
-    pub show_details: Option<ApiShowDetails>,
-    pub show_seasons: Vec<ApiSeasonDetails>,
+    pub show_details: Option<t_api::ApiShowDetails>,
+    pub show_seasons: Vec<t_api::ApiSeasonDetails>,
 }
 
 impl App {
@@ -79,7 +79,7 @@ impl App {
             sender_query: sq,
             receiver_rows: rr,
 
-            client: trakt_cache::establish_http_client(),
+            client: t_api::establish_http_client(),
 
             input: Input::default(),
             mode: AppMode::default(),
@@ -155,7 +155,7 @@ impl App {
             };
 
             // update db
-            trakt_cache::update_show(show);
+            t_db::update_show(show);
         }
     }
 
@@ -163,10 +163,10 @@ impl App {
         if self.mode == AppMode::MainView && let Some(i) = self.table_state.selected() {
             let show = &self.shows[i];
             let (show_details, season_details) =
-                trakt_cache::query_detailed(&self.client, &show.imdb_id).await;
+                t_api::query_detailed(&self.client, &show.imdb_id).await;
 
             // TODO - when i have these, add them to the db
-            // trakt_cache::update_show_info(&ctx ...);
+            // t_db::update_show_info(&ctx ...);
 
             self.show_details = Some(show_details);
             self.show_seasons = season_details;

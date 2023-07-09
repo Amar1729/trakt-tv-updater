@@ -3,7 +3,7 @@ use diesel::SqliteConnection;
 use log::*;
 
 use crate::models::TraktShow;
-use crate::trakt_cache;
+use crate::trakt::{t_db, t_api};
 
 pub mod imdb_reader;
 
@@ -24,26 +24,26 @@ fn load_combined_data_sources(ctx: &mut SqliteConnection) -> Vec<TraktShow> {
     // load all shows, and fill db if db is empty
     // let items = imdb_reader::load_show_vec();
 
-    let row_count = trakt_cache::count_trakt_db(ctx);
+    let row_count = t_db::count_trakt_db(ctx);
     info!("row count: {}", row_count);
 
     if row_count < 100 {
         // if we dont have many rows in db (clean env or devel), load from imdb data
         let items = imdb_reader::load_show_vec();
         // TODO: put this on a thread, once i figure out borrowing?
-        trakt_cache::prefill_db_from_imdb(ctx, &items);
+        t_db::prefill_db_from_imdb(ctx, &items);
 
         items
     } else {
         // query everything from db
-        trakt_cache::load_filtered_shows(ctx)
+        t_db::load_filtered_shows(ctx)
     }
 }
 
 /// A reader that reads data and then waits to respond to queries.
 pub fn data_manager(sender: Sender<Vec<TraktShow>>, receiver: Receiver<String>) {
     std::thread::spawn(move || {
-        let mut ctx = trakt_cache::establish_ctx();
+        let mut ctx = t_db::establish_ctx();
         let items = load_combined_data_sources(&mut ctx);
 
         loop {
