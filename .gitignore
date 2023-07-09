@@ -2,6 +2,9 @@
 .env
 *.json
 *.db
+*tsv
+*data
+*.log
 
 # build artifacts
 /target
