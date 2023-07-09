@@ -32,6 +32,18 @@ pub enum AppMode {
     // EpisodeView,
 }
 
+/// inner struct for detailed show views.
+#[derive(Debug, Default)]
+pub struct AppShowView {
+    pub show_details: Option<t_api::ApiShowDetails>,
+    pub seasons: Vec<t_api::ApiSeasonDetails>,
+
+    pub season_table_state: TableState,
+    // unimpl'd yet...
+    // pub episodes: Vec<>,
+    // pub episode_table_state: TableState,
+}
+
 /// Application.
 #[derive(Debug)]
 pub struct App {
@@ -55,10 +67,7 @@ pub struct App {
     pub shows: Vec<TraktShow>,
 
     // used in season view
-    // TODO(?) maybe this should be a nested stuct, only relevant for season view?
-    // similar with the stuff required by main view and eventual episode view
-    pub show_details: Option<t_api::ApiShowDetails>,
-    pub show_seasons: Vec<t_api::ApiSeasonDetails>,
+    pub show_view: AppShowView,
 }
 
 impl App {
@@ -87,8 +96,7 @@ impl App {
             scroll_state: ScrollbarState::default(),
             shows: Vec::new(),
 
-            show_details: None,
-            show_seasons: vec![],
+            show_view: AppShowView::default(),
         }
     }
 
@@ -168,8 +176,11 @@ impl App {
             // TODO - when i have these, add them to the db
             // t_db::update_show_info(&ctx ...);
 
-            self.show_details = Some(show_details);
-            self.show_seasons = season_details;
+            self.show_view.show_details = Some(show_details);
+            if season_details.len() > 0 {
+                self.show_view.season_table_state.select(Some(0));
+            }
+            self.show_view.seasons = season_details;
 
             self.mode = AppMode::SeasonView;
         }

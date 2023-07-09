@@ -180,7 +180,7 @@ fn initalize_app<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
 
 /// Render details for a TV season.
 fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
-    if let Some(s_info) = &app.show_details {
+    if let Some(s_info) = &app.show_view.show_details {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
@@ -207,7 +207,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
 
         frame.render_widget(widget, chunks[0]);
 
-        let rows = app.show_seasons.iter().map(|season| {
+        let rows = app.show_view.seasons.iter().map(|season| {
             Row::new(vec![
                 Cell::from(season.number.to_string()),
                 Cell::from(season.title.to_string()),
