@@ -7,6 +7,7 @@ use crate::{
 use crossbeam::channel::{unbounded, Receiver, SendError, Sender};
 use log::*;
 use ratatui::widgets::{ScrollbarState, TableState};
+use reqwest::Client;
 use tui_input::Input;
 
 /// Application result type.
@@ -41,6 +42,9 @@ pub struct App {
     pub sender_query: Sender<String>,
     pub receiver_rows: Receiver<Vec<TraktShow>>,
 
+    /// for querying trakt
+    pub client: Client,
+
     /// ui+handling changes based on the app's current view
     pub mode: AppMode,
 
@@ -68,6 +72,8 @@ impl App {
             // (is there some builder pattern/crate i can use to reduce this?)
             sender_query: sq,
             receiver_rows: rr,
+
+            client: trakt_cache::establish_http_client(),
 
             input: Input::default(),
             mode: AppMode::default(),
