@@ -54,6 +54,32 @@ pub struct ApiResponse {
     pub results: Vec<ApiMatch>,
 }
 
+// shows/<id>?extended=full
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ApiShowDetails {
+    pub title: String,
+    pub year: u32,
+    pub ids: ApiIDs,
+    pub overview: String,
+    // pub first_aired: datetime,
+    pub network: String,
+    pub country: String,
+    // pub language: String,
+    pub aired_episodes: u32,
+}
+
+// shows/<id>/seasons?extended=full
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ApiSeasonDetails {
+    pub number: usize,
+    pub ids: ApiIDs,
+    pub episode_count: usize,
+    pub title: String,
+    // pub first_aired: datetime,
+    pub overview: Option<String>,
+    pub network: String,
+}
+
 pub fn establish_ctx() -> SqliteConnection {
     dotenv().ok();
 
@@ -188,31 +214,64 @@ pub fn establish_http_client() -> Client {
         .unwrap()
 }
 
-/// Gets show results from searching trakt for an IMDB id (this should be unambiguous)
-pub async fn query_trakt_api(client: &reqwest::Client, imdb_id: u32) -> Vec<ApiShow> {
-    let search_url = format!("{}/search/imdb/{}", TRAKT_URL, imdb_id);
-
+async fn query_show_info(client: &reqwest::Client, imdb_id: &String) -> ApiShowDetails {
+    let search_url = format!("{}/shows/{}?extended=full", TRAKT_URL, imdb_id);
     let response = client.get(search_url).send().await.unwrap();
 
     match response.status() {
         reqwest::StatusCode::OK => {
-            // should actually match properly on text not coming back?
             let text = response.text().await.unwrap();
 
-            match serde_json::from_str::<ApiResponse>(&text) {
-                Ok(response) => {
-                    return response
-                        .results
-                        .into_iter()
-                        .map(|api_match| api_match.show)
-                        .collect()
+            match serde_json::from_str::<ApiShowDetails>(&text) {
+                Ok(response) => response,
+                Err(other) => {
+                    info!("Failed to parse: {}", other);
+                    panic!();
                 }
-                Err(other) => panic!("missed {:?}", other),
             }
         }
         reqwest::StatusCode::UNAUTHORIZED => unimplemented!(),
-        _ => panic!("panic"),
+        _ => {
+            info!("Failed to request");
+            panic!();
+        }
     }
+}
+
+async fn query_season_info(client: &reqwest::Client, imdb_id: &String) -> Vec<ApiSeasonDetails> {
+    let search_url = format!("{}/shows/{}/seasons?extended=full", TRAKT_URL, imdb_id);
+    let response = client.get(search_url).send().await.unwrap();
+
+    match response.status() {
+        reqwest::StatusCode::OK => {
+            let text = response.text().await.unwrap();
+
+            match serde_json::from_str::<Vec<ApiSeasonDetails>>(&text) {
+                Ok(response) => response,
+                Err(other) => {
+                    info!("Failed to parse: {}", other);
+                    panic!();
+                }
+            }
+        }
+        reqwest::StatusCode::UNAUTHORIZED => unimplemented!(),
+        _ => {
+            info!("Failed to request");
+            panic!();
+        }
+    }
+}
+
+/// Gets detailed show results from searching trakt for an IMDB id (this should be unambiguous)
+/// Does two API calls: one for the show info, one for season info
+pub async fn query_detailed(
+    client: &reqwest::Client,
+    imdb_id: &String,
+) -> (ApiShowDetails, Vec<ApiSeasonDetails>) {
+    (
+        query_show_info(client, &imdb_id).await,
+        query_season_info(client, &imdb_id).await,
+    )
 }
 
 pub async fn fill_trakt_db_from_imdb(ctx: &mut SqliteConnection, imdb_id: u32) {

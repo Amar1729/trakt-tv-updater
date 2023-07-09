@@ -5,7 +5,7 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{
         Block, BorderType, Borders, Cell, Gauge, Paragraph, Row, Scrollbar, ScrollbarOrientation,
-        Table,
+        Table, Wrap,
     },
     Frame,
 };
@@ -178,6 +178,77 @@ fn initalize_app<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
     frame.render_widget(progress, chunks[2])
 }
 
+/// Render details for a TV season.
+fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
+    if let Some(s_info) = &app.show_details {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+            .split(frame.size());
+
+        let text = Text::from(vec![
+            Line::default(),
+            Line::from(format!("Release Year: {}", s_info.year.to_string())),
+            Line::from(format!("Network: {}", s_info.network.as_str())),
+            Line::from(format!("Episodes: {}", s_info.aired_episodes)),
+            Line::default(),
+            Line::from(s_info.overview.as_str()),
+        ]);
+
+        let widget = Paragraph::new(text)
+            .wrap(Wrap { trim: false })
+            .style(Style::default())
+            .block(
+                Block::default()
+                    .title(s_info.title.as_str())
+                    .borders(Borders::ALL)
+                    .style(Style::default().fg(Color::Gray)),
+            );
+
+        frame.render_widget(widget, chunks[0]);
+
+        let rows = app.show_seasons.iter().map(|season| {
+            Row::new(vec![
+                Cell::from(season.number.to_string()),
+                Cell::from(season.title.to_string()),
+                Cell::from(season.episode_count.to_string()),
+                // Cell::from(season.first_aired.to_string()),
+            ])
+        });
+
+        // render a stateless season table for now.
+        frame.render_widget(
+            Table::new(rows)
+                .header(
+                    Row::new(vec![
+                        "season #",
+                        "title",
+                        "#episodes",
+                        // "first_aired",
+                        // user_watched?
+                    ])
+                    .style(Style::default().fg(Color::Yellow)),
+                )
+                .block(Block::default().title("Seasons").borders(Borders::ALL))
+                .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
+                .highlight_symbol(">> ")
+                .widths(&[
+                    Constraint::Length(9),
+                    Constraint::Length(20),
+                    Constraint::Length(10),
+                    // Constraint::Length(12),
+                ])
+                .style(Style::default().fg(Color::Cyan).bg(Color::Black)),
+            chunks[1],
+        );
+
+        return;
+    }
+
+    // can't be called unless there's a row selected in main view.
+    unreachable!()
+}
+
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
     match app.mode {
@@ -185,6 +256,7 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
         AppMode::MainView => render_main_view(app, frame),
         AppMode::Querying => render_main_view(app, frame),
         AppMode::HelpWindow => unimplemented!(),
-        AppMode::SeasonView => unimplemented!(),
+        AppMode::SeasonView => render_season_view(app, frame),
+        // uh oh, i'm worried i'll need an episode view as well?
     }
 }

@@ -5,7 +5,7 @@ use crossterm::event::{MouseEvent, MouseEventKind};
 use tui_input::backend::crossterm::EventHandler;
 
 /// Handles the key events and updates the state of [`App`].
-pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
+pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
     // Exit application from any mode on `Ctrl-C`
     match key_event.code {
         KeyCode::Char('c') | KeyCode::Char('C') => {
@@ -56,6 +56,13 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             }
             // cycle through watch status for a show
             KeyCode::Char(' ') => app.toggle_watch_status(),
+
+            // open up tv show details view
+            KeyCode::Char('l') | KeyCode::Right => {
+                // app will only change its UI if a show is selected.
+                app.enter_show_details().await;
+            }
+
             _ => {}
         },
         AppMode::Querying => match key_event.code {
@@ -69,6 +76,10 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             _ => {
                 app.input.handle_event(&CrosstermEvent::Key(key_event));
             }
+        },
+        AppMode::SeasonView => match key_event.code {
+            KeyCode::Left | KeyCode::Char('h') => app.mode = AppMode::MainView,
+            _ => {}
         },
         _ => unimplemented!(),
     }

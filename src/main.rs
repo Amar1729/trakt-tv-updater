@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 mod interface;
 mod models;
 mod schema;
@@ -18,5 +20,5 @@ async fn main() {
     )
     .unwrap();
 
-    let _ = interface::run();
+    let _ = interface::run().await;
 }

@@ -2,7 +2,7 @@ use std::error;
 
 use crate::{
     models::{TraktShow, UserStatus},
-    trakt_cache,
+    trakt_cache::{self, ApiSeasonDetails, ApiShowDetails},
 };
 use crossbeam::channel::{unbounded, Receiver, SendError, Sender};
 use log::*;
@@ -53,6 +53,12 @@ pub struct App {
     pub table_state: TableState,
     pub scroll_state: ScrollbarState,
     pub shows: Vec<TraktShow>,
+
+    // used in season view
+    // TODO(?) maybe this should be a nested stuct, only relevant for season view?
+    // similar with the stuff required by main view and eventual episode view
+    pub show_details: Option<ApiShowDetails>,
+    pub show_seasons: Vec<ApiSeasonDetails>,
 }
 
 impl App {
@@ -80,6 +86,9 @@ impl App {
             table_state: TableState::default(),
             scroll_state: ScrollbarState::default(),
             shows: Vec::new(),
+
+            show_details: None,
+            show_seasons: vec![],
         }
     }
 
@@ -147,6 +156,22 @@ impl App {
 
             // update db
             trakt_cache::update_show(show);
+        }
+    }
+
+    pub async fn enter_show_details(&mut self) {
+        if self.mode == AppMode::MainView && let Some(i) = self.table_state.selected() {
+            let show = &self.shows[i];
+            let (show_details, season_details) =
+                trakt_cache::query_detailed(&self.client, &show.imdb_id).await;
+
+            // TODO - when i have these, add them to the db
+            // trakt_cache::update_show_info(&ctx ...);
+
+            self.show_details = Some(show_details);
+            self.show_seasons = season_details;
+
+            self.mode = AppMode::SeasonView;
         }
     }
 }

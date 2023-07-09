@@ -23,7 +23,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
 
-pub fn run() -> AppResult<()> {
+pub async fn run() -> AppResult<()> {
     // Create an application.
     let mut app = App::new();
 
@@ -41,7 +41,7 @@ pub fn run() -> AppResult<()> {
         // Handle events.
         match tui.events.next()? {
             Event::Tick => app.tick(),
-            Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
+            Event::Key(key_event) => handle_key_events(key_event, &mut app).await?,
             Event::Mouse(mouse_event) => handle_mouse_events(mouse_event, &mut app)?,
             Event::Resize(_, _) => {}
         }
