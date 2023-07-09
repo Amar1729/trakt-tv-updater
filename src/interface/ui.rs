@@ -212,7 +212,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
                 Cell::from(season.number.to_string()),
                 Cell::from(season.title.to_string()),
                 Cell::from(season.episode_count.to_string()),
-                // Cell::from(season.first_aired.to_string()),
+                Cell::from(season.first_aired.format("%Y-%m-%d").to_string()),
             ])
         });
 
@@ -224,7 +224,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
                         "season #",
                         "title",
                         "#episodes",
-                        // "first_aired",
+                        "aired",
                         // user_watched?
                     ])
                     .style(Style::default().fg(Color::Yellow)),
@@ -236,7 +236,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
                     Constraint::Length(9),
                     Constraint::Length(20),
                     Constraint::Length(10),
-                    // Constraint::Length(12),
+                    Constraint::Length(12),
                 ])
                 .style(Style::default().fg(Color::Cyan).bg(Color::Black)),
             chunks[1],

@@ -1,5 +1,4 @@
-// TODO - will i need chrono for parsing datetime from api?
-// use chrono::prelude::*;
+use chrono::{DateTime, Utc};
 use log::*;
 use std::{env, thread, time};
 
@@ -55,7 +54,7 @@ pub struct ApiShowDetails {
     pub year: u32,
     pub ids: ApiIDs,
     pub overview: String,
-    // pub first_aired: datetime,
+    pub first_aired: DateTime<Utc>,
     pub network: String,
     pub country: String,
     // pub language: String,
@@ -69,7 +68,7 @@ pub struct ApiSeasonDetails {
     pub ids: ApiIDs,
     pub episode_count: usize,
     pub title: String,
-    // pub first_aired: datetime,
+    pub first_aired: DateTime<Utc>,
     pub overview: Option<String>,
     pub network: String,
 }
