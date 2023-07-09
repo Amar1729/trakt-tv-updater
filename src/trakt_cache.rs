@@ -27,9 +27,9 @@ const TRAKT_URL: &str = "http://127.0.0.1:8080";
 // const TRAKT_URL: &str = "https://api-staging.trakt.tv/api";
 
 #[derive(Serialize, Deserialize, Debug)]
-struct ApiIDs {
+pub struct ApiIDs {
     trakt: u32,
-    slug: String,
+    slug: Option<String>,
     imdb: Option<String>,
     // skipping other unimportant IDs
 }
