@@ -1,9 +1,10 @@
 /// Deal with Trakt API:
 /// - query trakt API
 /// - cache info from trakt in local db
-use crate::models::TraktShow;
+use crate::models::{TraktShow, UserStatus};
 use crate::schema::trakt_shows;
 
+use chrono::prelude::*;
 use log::*;
 use std::{env, thread, time};
 
@@ -72,6 +73,32 @@ pub fn read_trakt_db(ctx: &mut SqliteConnection) {
     for t in results {
         println!("{}", t.original_title);
     }
+}
+
+/// count the rows in the db
+/// (this should be fast - am i doing this inefficiently?)
+pub fn count_trakt_db(ctx: &mut SqliteConnection) -> usize {
+    use self::trakt_shows::dsl::*;
+
+    let rows = trakt_shows
+        .select(TraktShow::as_select())
+        .load_iter(ctx)
+        .unwrap();
+
+    rows.into_iter().count()
+}
+
+/// Return all rows in the db that are not marked as unwatched, and don't have release in the future
+pub fn load_filtered_shows(ctx: &mut SqliteConnection) -> Vec<TraktShow> {
+    let cap_year = Utc::now().year() + 1;
+
+    trakt_shows::table
+        .order_by(trakt_shows::release_year)
+        .filter(trakt_shows::release_year.le(cap_year))
+        .filter(trakt_shows::user_status.ne(UserStatus::Unwatched))
+        .select(TraktShow::as_returning())
+        .load(ctx)
+        .unwrap()
 }
 
 // probably should be renamed / reworked
