@@ -41,7 +41,7 @@ fn load_imdb_shows() -> DataFrame {
         .sort(
             "startYear",
             SortOptions {
-                descending: true,
+                descending: false,
                 nulls_last: true,
                 multithreaded: true,
             },
@@ -50,9 +50,9 @@ fn load_imdb_shows() -> DataFrame {
             // you should be able to do is_in here but i couldn't figure out the syntax?
             col("titleType")
                 .eq(lit("tvSeries"))
-                .or(col("titleType").eq(lit("tvMiniSeries")))
-                .and(col("startYear").lt(lit(cap_year))),
+                .or(col("titleType").eq(lit("tvMiniSeries"))),
         )
+        .filter(col("startYear").lt(lit(cap_year)))
         .select(&[
             col("tconst"),
             col("primaryTitle"),
