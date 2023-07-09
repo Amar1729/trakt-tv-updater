@@ -3,6 +3,8 @@ name = "trakt-tv-updater"
 version = "0.1.0"
 edition = "2021"
 
+# make sure to use nightly (how do i enforce this? rust-toolchain.toml?)
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
