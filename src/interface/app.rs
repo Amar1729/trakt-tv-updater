@@ -150,6 +150,23 @@ impl App {
         self.scroll_state = self.scroll_state.position(i as u16);
     }
 
+    pub fn season_next(&mut self, step: usize) {
+        let max = self.show_view.seasons.len() - 1;
+        let i = match self.show_view.season_table_state.selected() {
+            Some(i) => std::cmp::min(i + step, max),
+            None => 0,
+        };
+        self.show_view.season_table_state.select(Some(i));
+    }
+
+    pub fn season_prev(&mut self, step: usize) {
+        let i = match self.show_view.season_table_state.selected() {
+            Some(i) => std::cmp::max(i as i32 - step as i32, 0) as usize,
+            None => 0,
+        };
+        self.show_view.season_table_state.select(Some(i));
+    }
+
     /// Cycle watch status of a currently-selected show in main window
     pub fn toggle_watch_status(&mut self) {
         if let Some(i) = self.table_state.selected() {

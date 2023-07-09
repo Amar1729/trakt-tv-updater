@@ -79,6 +79,8 @@ pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<
         },
         AppMode::SeasonView => match key_event.code {
             KeyCode::Left | KeyCode::Char('h') => app.mode = AppMode::MainView,
+            KeyCode::Char('k') | KeyCode::Up => app.season_prev(1),
+            KeyCode::Char('j') | KeyCode::Down => app.season_next(1),
             _ => {}
         },
         _ => unimplemented!(),

@@ -217,7 +217,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
         });
 
         // render a stateless season table for now.
-        frame.render_widget(
+        frame.render_stateful_widget(
             Table::new(rows)
                 .header(
                     Row::new(vec![
@@ -240,6 +240,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
                 ])
                 .style(Style::default().fg(Color::Cyan).bg(Color::Black)),
             chunks[1],
+            &mut app.show_view.season_table_state,
         );
 
         return;
