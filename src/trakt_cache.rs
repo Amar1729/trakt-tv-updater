@@ -1,6 +1,7 @@
 /// Deal with Trakt API:
 /// - query trakt API
 /// - cache info from trakt in local db
+/// This file sort of has a lot of functionality, i may have to split it up later.
 use crate::models::{TraktShow, UserStatus};
 use crate::schema::trakt_shows;
 
@@ -58,23 +59,6 @@ pub fn establish_ctx() -> SqliteConnection {
     })
 }
 
-pub fn read_trakt_db(ctx: &mut SqliteConnection) {
-    // TODO: dev function for now to remind me how queries work.
-    // i'll redo this once i get a user interface up.
-    let results = trakt_shows::table
-        .limit(5)
-        .order_by(trakt_shows::release_year)
-        .filter(trakt_shows::release_year.is_not_null())
-        .select(TraktShow::as_select())
-        .load(ctx)
-        .expect("err");
-
-    println!("displaying: {} ", results.len());
-    for t in results {
-        println!("{}", t.original_title);
-    }
-}
-
 /// count the rows in the db
 /// (this should be fast - am i doing this inefficiently?)
 pub fn count_trakt_db(ctx: &mut SqliteConnection) -> usize {
@@ -99,58 +83,6 @@ pub fn load_filtered_shows(ctx: &mut SqliteConnection) -> Vec<TraktShow> {
         .select(TraktShow::as_returning())
         .load(ctx)
         .unwrap()
-}
-
-// probably should be renamed / reworked
-// i expect that querying alone will be a pretty large switch on all the ways we will filter from
-// the db
-pub fn query_trakt_db(ctx: &mut SqliteConnection, trakt_id: i32) -> Option<TraktShow> {
-    trakt_shows::table
-        .filter(trakt_shows::trakt_id.eq(trakt_id))
-        .select(TraktShow::as_select())
-        .first(ctx)
-        .optional()
-        .unwrap()
-}
-
-pub fn write_trakt_db(ctx: &mut SqliteConnection, show: ApiShow) -> TraktShow {
-    // should be a sql query that does insert or instead?
-    //
-    // insert into trakt_shows (
-    //     id, imdb_id, name, release_year
-    // )
-    //     select 11, 'tt0011', 'Fake Show', 0
-    // where not EXISTS (
-    //     select * from trakt_shows where id = 11)
-    if let Some(local_result) = query_trakt_db(ctx, show.ids.trakt as i32) {
-        println!("returning local result: {:?}", local_result);
-        return local_result;
-    }
-
-    // TODO: some results from trakt API will give back null IMDB ID.
-    // it can't be the primary key if our initial data pull is from trakt.
-    // however, if our initial data is from IMDB, then primary key as imdb id makes sense.
-    let new_show = TraktShow {
-        trakt_id: Some(show.ids.trakt as i32),
-        imdb_id: show.ids.imdb.unwrap(),
-        primary_title: show.title.clone(),
-        original_title: show.title,
-        country: None,
-        release_year: match show.year {
-            Some(y) => Some(y as i32),
-            None => None,
-        },
-        network: None,
-        no_seasons: None,
-        no_episodes: None,
-        user_status: crate::models::UserStatus::Todo,
-    };
-
-    diesel::insert_into(trakt_shows::table)
-        .values(&new_show)
-        .returning(TraktShow::as_returning())
-        .get_result(ctx)
-        .expect("err saving new trakt_show")
 }
 
 pub async fn query_trakt_api(client: &reqwest::Client, imdb_id: u32) -> Vec<ApiShow> {
@@ -228,6 +160,7 @@ pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
         {
             Ok(_c) => {
                 // can i count only which rows were updated?
+                info!("Inserted row: {}", &row.imdb_id);
             }
             Err(err) => {
                 // TODO: if this errs, should bubble up and quit app?
@@ -236,6 +169,8 @@ pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
             }
         }
     }
+
+    info!("Inserted/Updated {} rows.", rows.len());
 }
 
 pub async fn fill_trakt_db_from_imdb(ctx: &mut SqliteConnection, imdb_id: u32) {

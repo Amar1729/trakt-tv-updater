@@ -1,4 +1,5 @@
 use chrono::prelude::*;
+use log::*;
 use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -68,17 +69,23 @@ fn load_imdb_shows() -> DataFrame {
 }
 
 pub fn load_show_vec() -> Vec<TraktShow> {
-    let df = load_imdb_shows().head(Some(100));
+    info!("Loading from datadump ...");
+
+    // arbitrary limit for testing
+    let df = load_imdb_shows().head(Some(99));
+    // let df = load_imdb_shows();
 
     let fields = df.get_columns();
     let columns: Vec<&str> = fields.iter().map(|x| x.name()).collect();
 
     let mut items: Vec<TraktShow> = vec![];
 
+    info!("Serializing structs...");
     for idx in 0..df.height() {
         let mut map = std::collections::HashMap::new();
 
         let row = df.get_row(idx).unwrap();
+        info!("{:?}", row);
 
         for (column, elem) in std::iter::zip(&columns, &mut row.0.iter()) {
             let value = match elem {
