@@ -2,7 +2,9 @@
 # see https://diesel.rs/guides/configuring-diesel-cli
 
 [print_schema]
-file = "src/schema.rs"
+# disabled: we're using diesel_derive_enum, and we've edited our schema ourselves
+# (since we're using sqlite, this won't work with diesel-cli)
+# file = "src/schema.rs"
 custom_type_derives = ["diesel::query_builder::QueryId"]
 
 [migrations_directory]
