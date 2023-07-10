@@ -1,5 +1,6 @@
 use crate::{
     models::{TraktShow, UserStatus},
+    sources::DataManager,
     trakt::{t_api, t_db},
 };
 use crossbeam::channel::{unbounded, Receiver, SendError, Sender};
@@ -45,9 +46,7 @@ pub struct App {
     /// Is the application running?
     pub running: bool,
 
-    /// for communication with our data manager.
-    pub sender_query: Sender<String>,
-    pub receiver_rows: Receiver<Vec<TraktShow>>,
+    pub data_manager: DataManager,
 
     /// for querying trakt
     pub client: Client,
@@ -67,21 +66,14 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new() -> Self {
-        // i think these both actually could be len0
-        let (sq, receiver_query) = unbounded();
-        let (sender_rows, rr) = unbounded();
-
+    pub fn new() -> eyre::Result<Self> {
         // when a new app is created, begin a bg data manager task
         // this task will receive a string query, and send back a TraktShow vec
-        crate::sources::data_manager(sender_rows, receiver_query);
+        let data_manager = DataManager::init()?;
 
-        App {
+        Ok(App {
             running: true,
-            // removed #[derive(Default)] for App because s/r don't have sane defaults
-            // (is there some builder pattern/crate i can use to reduce this?)
-            sender_query: sq,
-            receiver_rows: rr,
+            data_manager,
 
             client: t_api::establish_http_client(),
 
@@ -92,34 +84,31 @@ impl App {
             shows: Vec::new(),
 
             show_view: AppShowView::default(),
-        }
+        })
     }
 
     /// Handles the tick event of the terminal.
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> eyre::Result<()> {
         // WIP implementation of query from our data rows
         // (right now, just pull everything on boot)
         if self.shows.len() == 0 {
-            match self.sender_query.send(String::from("spurious")) {
-                Ok(_) => {}
-                Err(SendError(err)) => {
-                    info!("discon {}", err);
-                    self.quit();
-                }
-            }
+            let items = self
+                .data_manager
+                .query(String::from("spurious"))
+                .ok_or_else(|| {
+                    error!("data manager thread panicked!");
+                    eyre::eyre!("data manager thread panicked!")
+                })?;
 
-            match self.receiver_rows.recv() {
-                Ok(items) => {
-                    self.scroll_state = self.scroll_state.content_length(items.len() as u16);
-                    self.shows = items;
+            self.scroll_state = self.scroll_state.content_length(items.len() as u16);
+            self.shows = items;
 
-                    if self.mode == AppMode::Initializing {
-                        self.mode = AppMode::MainView;
-                    }
-                }
-                Err(_) => {}
+            if self.mode == AppMode::Initializing {
+                self.mode = AppMode::MainView;
             }
         }
+
+        Ok(())
     }
 
     /// Set running to false to quit the application.

@@ -25,7 +25,7 @@ use std::io;
 
 pub async fn run() -> eyre::Result<()> {
     // Create an application.
-    let mut app = App::new();
+    let mut app = App::new()?;
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
@@ -40,7 +40,7 @@ pub async fn run() -> eyre::Result<()> {
         tui.draw(&mut app)?;
         // Handle events.
         match tui.events.next()? {
-            Event::Tick => app.tick(),
+            Event::Tick => app.tick()?,
             Event::Key(key_event) => handle_key_events(key_event, &mut app).await?,
             Event::Mouse(mouse_event) => handle_mouse_events(mouse_event, &mut app)?,
             Event::Resize(_, _) => {}

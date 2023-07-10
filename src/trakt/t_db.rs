@@ -68,7 +68,7 @@ pub fn update_show(show: &TraktShow) {
 }
 
 /// Overwrites (or fills) db with the rows parsed from an IMDB data dump.
-pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
+pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) -> eyre::Result<()> {
     info!("Filling db...");
 
     use self::trakt_shows::dsl::*;
@@ -94,10 +94,12 @@ pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
             Err(err) => {
                 // TODO: if this errs, should bubble up and quit app?
                 info!("Failed db insert: {}", err);
-                panic!();
+                return Err(eyre::eyre!(err));
             }
         }
     }
 
     info!("Inserted/Updated {} rows.", rows.len());
+
+    Ok(())
 }
