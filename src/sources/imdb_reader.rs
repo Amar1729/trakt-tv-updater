@@ -1,3 +1,5 @@
+use std::iter::Iterator;
+
 use chrono::prelude::*;
 use log::*;
 use polars::prelude::*;
@@ -22,7 +24,7 @@ struct ImdbShow {
 }
 
 /// Read shows from IMDB data dump
-fn load_imdb_shows(dump_file_name: &str) -> DataFrame {
+fn load_imdb_shows(dump_file_name: &str) -> impl Iterator<Item = ImdbShow> {
     let mut schema = Schema::new();
     schema.with_column("endYear".to_string().into(), DataType::Int64);
 
@@ -63,26 +65,18 @@ fn load_imdb_shows(dump_file_name: &str) -> DataFrame {
     // this function currently returns a DataFrame. however, if we wanted to optimize
     // i think we could instead return a LazyDataFrame and stream chunks over the mpsc
     // channel (would probably want to stop sorting if we do that?)
-    q.with_streaming(true).collect().unwrap()
-}
+    let frame = q.with_streaming(true).collect().unwrap();
 
-fn load_show_vec_from_source(dump_file_name: &str) -> Vec<TraktShow> {
-    info!("Loading from datadump ...");
+    let columns: Vec<String> = frame
+        .get_columns()
+        .iter()
+        .map(|x| x.name().to_string())
+        .collect();
 
-    // arbitrary limit for testing
-    let df = load_imdb_shows(dump_file_name).head(Some(99));
-    // let df = load_imdb_shows();
-
-    let fields = df.get_columns();
-    let columns: Vec<&str> = fields.iter().map(|x| x.name()).collect();
-
-    let mut items: Vec<TraktShow> = vec![];
-
-    info!("Serializing structs...");
-    for idx in 0..df.height() {
+    (0..frame.height()).map(move |idx| {
         let mut val = json!({});
 
-        let row = df.get_row(idx).unwrap();
+        let row = frame.get_row(idx).unwrap();
         info!("{:?}", row);
 
         for (column, elem) in std::iter::zip(&columns, &mut row.0.iter()) {
@@ -97,14 +91,24 @@ fn load_show_vec_from_source(dump_file_name: &str) -> Vec<TraktShow> {
                 .insert(column.to_string(), value);
         }
 
-        let j_row = serde_json::from_value::<ImdbShow>(val).unwrap();
+        serde_json::from_value::<ImdbShow>(val).unwrap()
+    })
+}
 
-        items.push(TraktShow {
-            imdb_id: j_row.tconst,
+fn load_show_vec_from_source(dump_file_name: &str) -> Vec<TraktShow> {
+    info!("Loading from datadump ...");
+
+    // arbitrary limit for testing
+    let shows = load_imdb_shows(dump_file_name).take(99);
+
+    info!("Serializing structs...");
+    shows
+        .map(|show| TraktShow {
+            imdb_id: show.tconst,
             trakt_id: None,
-            primary_title: j_row.primary_title.unwrap(),
-            original_title: j_row.original_title.unwrap(),
-            release_year: match j_row.start_year {
+            primary_title: show.primary_title.unwrap(),
+            original_title: show.original_title.unwrap(),
+            release_year: match show.start_year {
                 Some(expr) => Some(expr as i32),
                 None => None,
             },
@@ -113,10 +117,8 @@ fn load_show_vec_from_source(dump_file_name: &str) -> Vec<TraktShow> {
             country: None,
             network: None,
             user_status: crate::models::UserStatus::Todo,
-        });
-    }
-
-    items
+        })
+        .collect()
 }
 
 pub fn load_show_vec() -> Vec<TraktShow> {
