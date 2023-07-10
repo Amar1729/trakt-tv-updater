@@ -187,19 +187,24 @@ impl App {
     pub async fn enter_show_details(&mut self) {
         if self.mode == AppMode::MainView && let Some(i) = self.table_state.selected() {
             let show = &self.shows[i];
-            let (show_details, season_details) =
-                t_api::query_detailed(&self.client, &show.imdb_id).await;
+            match t_api::query_detailed(&self.client, &show.imdb_id).await {
+                Ok((show_details, season_details)) => {
+                    // TODO - when i have these, add them to the db
+                    // t_db::update_show_info(&ctx ...);
 
-            // TODO - when i have these, add them to the db
-            // t_db::update_show_info(&ctx ...);
+                    self.show_view.show_details = Some(show_details);
+                    if season_details.len() > 0 {
+                        self.show_view.season_table_state.select(Some(0));
+                    }
+                    self.show_view.seasons = season_details;
 
-            self.show_view.show_details = Some(show_details);
-            if season_details.len() > 0 {
-                self.show_view.season_table_state.select(Some(0));
+                    self.mode = AppMode::SeasonView;
+                }
+                Err(other) => {
+                    info!("error querying show details: {}", other);
+                    self.quit();
+                }
             }
-            self.show_view.seasons = season_details;
-
-            self.mode = AppMode::SeasonView;
         }
     }
 }
