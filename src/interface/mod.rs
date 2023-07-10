@@ -25,7 +25,7 @@ use std::io;
 
 pub async fn run() -> eyre::Result<()> {
     // Create an application.
-    let mut app = App::new()?;
+    let app = App::new()?;
 
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stderr());
@@ -35,6 +35,21 @@ pub async fn run() -> eyre::Result<()> {
     tui.init()?;
 
     // Start the main loop.
+    let res = main_loop(app, &mut tui).await;
+
+    if let Err(e) = &res {
+        log::error!("App quit unexpectedly: {e:?}");
+    }
+
+    // Exit the user interface.
+    tui.exit()?;
+    res
+}
+
+async fn main_loop<B: ratatui::backend::Backend>(
+    mut app: App,
+    tui: &mut Tui<B>,
+) -> eyre::Result<()> {
     while app.running {
         // Render the user interface.
         tui.draw(&mut app)?;
@@ -46,8 +61,5 @@ pub async fn run() -> eyre::Result<()> {
             Event::Resize(_, _) => {}
         }
     }
-
-    // Exit the user interface.
-    tui.exit()?;
     Ok(())
 }

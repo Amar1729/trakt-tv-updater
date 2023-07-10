@@ -152,7 +152,7 @@ impl App {
     }
 
     /// Cycle watch status of a currently-selected show in main window
-    pub fn toggle_watch_status(&mut self) {
+    pub fn toggle_watch_status(&mut self) -> eyre::Result<()> {
         if let Some(i) = self.table_state.selected() {
             let show = &mut self.shows[i];
             info!("Currently selected show: {:?}", show);
@@ -164,11 +164,13 @@ impl App {
             };
 
             // update db
-            t_db::update_show(show);
+            t_db::update_show(show)?;
         }
+
+        Ok(())
     }
 
-    pub async fn enter_show_details(&mut self) {
+    pub async fn enter_show_details(&mut self) -> eyre::Result<()> {
         if self.mode == AppMode::MainView && let Some(i) = self.table_state.selected() {
             let show = &self.shows[i];
             match t_api::query_detailed(&self.client, &show.imdb_id).await {
@@ -185,10 +187,13 @@ impl App {
                     self.mode = AppMode::SeasonView;
                 }
                 Err(other) => {
-                    info!("error querying show details: {}", other);
+                    error!("error querying show details: {}", other);
                     self.quit();
+                    eyre::bail!(other);
                 }
             }
         }
+
+        Ok(())
     }
 }

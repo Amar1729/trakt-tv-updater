@@ -55,12 +55,12 @@ pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> eyre::Resu
                 app.mode = AppMode::Querying;
             }
             // cycle through watch status for a show
-            KeyCode::Char(' ') => app.toggle_watch_status(),
+            KeyCode::Char(' ') => app.toggle_watch_status()?,
 
             // open up tv show details view
             KeyCode::Char('l') | KeyCode::Right => {
                 // app will only change its UI if a show is selected.
-                app.enter_show_details().await;
+                app.enter_show_details().await?;
             }
 
             _ => {}
