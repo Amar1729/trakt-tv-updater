@@ -1,9 +1,7 @@
 use std::iter::Iterator;
 
-use chrono::prelude::*;
 use log::*;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::models::TraktShow;
 
