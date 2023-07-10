@@ -2,7 +2,6 @@ use std::iter::Iterator;
 
 use chrono::prelude::*;
 use log::*;
-use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -17,82 +16,25 @@ pub fn download_source() {
 #[serde(rename_all = "camelCase")]
 struct ImdbShow {
     pub tconst: String,
+    pub title_type: String,
     pub primary_title: Option<String>,
     pub original_title: Option<String>,
+    #[serde(deserialize_with = "csv::invalid_option")]
     pub start_year: Option<i64>,
+    #[serde(deserialize_with = "csv::invalid_option")]
     pub end_year: Option<i64>,
 }
 
 /// Read shows from IMDB data dump
 fn load_imdb_shows(dump_file_name: &str) -> impl Iterator<Item = ImdbShow> {
-    let mut schema = Schema::new();
-    schema.with_column("endYear".to_string().into(), DataType::Int64);
-
-    // hope this doesn't be weird if someone runs it on dec 31
-    let cap_year = Utc::now().year() + 1;
-
-    let q = LazyCsvReader::new(dump_file_name)
-        .has_header(true)
-        .with_delimiter("\t".as_bytes()[0])
-        .with_ignore_errors(true)
-        .with_null_values(Some(NullValues::AllColumnsSingle(String::from("\\N"))))
-        .with_dtype_overwrite(Some(&schema))
-        .finish()
-        .unwrap()
-        .sort(
-            "startYear",
-            SortOptions {
-                descending: false,
-                nulls_last: true,
-                multithreaded: true,
-            },
-        )
-        .filter(
-            // you should be able to do is_in here but i couldn't figure out the syntax?
-            col("titleType")
-                .eq(lit("tvSeries"))
-                .or(col("titleType").eq(lit("tvMiniSeries"))),
-        )
-        .filter(col("startYear").lt(lit(cap_year)))
-        .select(&[
-            col("tconst"),
-            col("primaryTitle"),
-            col("originalTitle"),
-            col("startYear"),
-            col("endYear"),
-        ]);
-
-    // this function currently returns a DataFrame. however, if we wanted to optimize
-    // i think we could instead return a LazyDataFrame and stream chunks over the mpsc
-    // channel (would probably want to stop sorting if we do that?)
-    let frame = q.with_streaming(true).collect().unwrap();
-
-    let columns: Vec<String> = frame
-        .get_columns()
-        .iter()
-        .map(|x| x.name().to_string())
-        .collect();
-
-    (0..frame.height()).map(move |idx| {
-        let mut val = json!({});
-
-        let row = frame.get_row(idx).unwrap();
-        info!("{:?}", row);
-
-        for (column, elem) in std::iter::zip(&columns, &mut row.0.iter()) {
-            let value = match elem {
-                AnyValue::Null => json!(Option::<String>::None),
-                AnyValue::Utf8(val) => json!(val),
-                AnyValue::Int64(val) => json!(val),
-                other => unimplemented!("{:?}", other),
-            };
-            val.as_object_mut()
-                .unwrap()
-                .insert(column.to_string(), value);
-        }
-
-        serde_json::from_value::<ImdbShow>(val).unwrap()
-    })
+    let reader = csv::ReaderBuilder::new()
+        .delimiter(b'\t')
+        .from_path(dump_file_name)
+        .unwrap();
+    reader
+        .into_deserialize()
+        .map(|r| r.unwrap())
+        .filter(|show: &ImdbShow| ["tvSeries", "tvMiniSeries"].contains(&show.title_type.as_str()))
 }
 
 fn load_show_vec_from_source(dump_file_name: &str) -> Vec<TraktShow> {
