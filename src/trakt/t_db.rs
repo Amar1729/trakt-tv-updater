@@ -52,7 +52,6 @@ pub fn update_show(show: &TraktShow) -> eyre::Result<()> {
 
     match diesel::insert_into(trakt_shows)
         .values(show)
-        .returning(TraktShow::as_returning())
         .on_conflict(imdb_id)
         .do_update()
         .set(user_status.eq(&show.user_status))
@@ -78,7 +77,6 @@ pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) -
     for row in rows {
         match diesel::insert_into(trakt_shows)
             .values(row)
-            .returning(TraktShow::as_returning())
             .on_conflict(imdb_id)
             .do_update()
             // update the values that might be updated in a new data dump
