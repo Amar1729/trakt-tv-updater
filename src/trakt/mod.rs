@@ -1,5 +1,5 @@
-/// Encapsulate the different functionality we require for our app to interface with trakt:
-/// - database mod for storing data locally
-/// - api mod for talking to the API
-pub mod t_db;
+/// query the trakt api
 pub mod t_api;
+
+/// store data from trakt in a local db
+pub mod t_db;

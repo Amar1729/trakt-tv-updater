@@ -3,7 +3,7 @@ use diesel::SqliteConnection;
 use log::*;
 
 use crate::models::TraktShow;
-use crate::trakt::{t_db, t_api};
+use crate::trakt::{t_api, t_db};
 
 pub mod imdb_reader;
 

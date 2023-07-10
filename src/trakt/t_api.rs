@@ -73,7 +73,6 @@ pub struct ApiSeasonDetails {
     pub network: String,
 }
 
-
 /// Creates a single HTTP client to use for trakt.tv requests
 pub fn establish_http_client() -> Client {
     // TODO: anyhow/error handle this (as part of app startup?)
