@@ -22,16 +22,14 @@ struct ImdbShow {
 }
 
 /// Read shows from IMDB data dump
-fn load_imdb_shows() -> DataFrame {
-    let fname = "./title.basics.short.tsv";
-
+fn load_imdb_shows(dump_file_name: &str) -> DataFrame {
     let mut schema = Schema::new();
     schema.with_column("endYear".to_string().into(), DataType::Int64);
 
     // hope this doesn't be weird if someone runs it on dec 31
     let cap_year = Utc::now().year() + 1;
 
-    let q = LazyCsvReader::new(fname)
+    let q = LazyCsvReader::new(dump_file_name)
         .has_header(true)
         .with_delimiter("\t".as_bytes()[0])
         .with_ignore_errors(true)
@@ -68,11 +66,11 @@ fn load_imdb_shows() -> DataFrame {
     q.with_streaming(true).collect().unwrap()
 }
 
-pub fn load_show_vec() -> Vec<TraktShow> {
+fn load_show_vec_from_source(dump_file_name: &str) -> Vec<TraktShow> {
     info!("Loading from datadump ...");
 
     // arbitrary limit for testing
-    let df = load_imdb_shows().head(Some(99));
+    let df = load_imdb_shows(dump_file_name).head(Some(99));
     // let df = load_imdb_shows();
 
     let fields = df.get_columns();
@@ -82,7 +80,7 @@ pub fn load_show_vec() -> Vec<TraktShow> {
 
     info!("Serializing structs...");
     for idx in 0..df.height() {
-        let mut map = std::collections::HashMap::new();
+        let mut val = json!({});
 
         let row = df.get_row(idx).unwrap();
         info!("{:?}", row);
@@ -94,11 +92,12 @@ pub fn load_show_vec() -> Vec<TraktShow> {
                 AnyValue::Int64(val) => json!(val),
                 other => unimplemented!("{:?}", other),
             };
-            map.insert(*column as &str, value);
+            val.as_object_mut()
+                .unwrap()
+                .insert(column.to_string(), value);
         }
 
-        let j_text = serde_json::to_string(&map).unwrap();
-        let j_row = serde_json::from_str::<ImdbShow>(&j_text).unwrap();
+        let j_row = serde_json::from_value::<ImdbShow>(val).unwrap();
 
         items.push(TraktShow {
             imdb_id: j_row.tconst,
@@ -118,4 +117,20 @@ pub fn load_show_vec() -> Vec<TraktShow> {
     }
 
     items
+}
+
+pub fn load_show_vec() -> Vec<TraktShow> {
+    load_show_vec_from_source(DUMP_FILE_NAME)
+}
+
+const DUMP_FILE_NAME: &str = "./title.basics.short.tsv";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_load_sample_file() {
+        let _shows = load_show_vec_from_source("title.basics.randomsample");
+    }
 }
