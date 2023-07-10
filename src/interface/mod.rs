@@ -14,7 +14,7 @@ mod tui;
 mod handler;
 
 use crate::interface::{
-    app::{App, AppResult},
+    app::App,
     event::{Event, EventHandler},
     handler::{handle_key_events, handle_mouse_events},
     tui::Tui,
@@ -23,7 +23,7 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
 
-pub async fn run() -> AppResult<()> {
+pub async fn run() -> eyre::Result<()> {
     // Create an application.
     let mut app = App::new();
 

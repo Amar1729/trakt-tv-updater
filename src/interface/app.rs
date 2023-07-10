@@ -1,5 +1,3 @@
-use std::error;
-
 use crate::{
     models::{TraktShow, UserStatus},
     trakt::{t_api, t_db},
@@ -9,9 +7,6 @@ use log::*;
 use ratatui::widgets::{ScrollbarState, TableState};
 use reqwest::Client;
 use tui_input::Input;
-
-/// Application result type.
-pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
 /// Different modes for the app.
 #[derive(PartialEq, Eq, Debug, Default)]
