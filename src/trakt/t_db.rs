@@ -45,14 +45,13 @@ pub fn load_filtered_shows(ctx: &mut SqliteConnection) -> Vec<TraktShow> {
 }
 
 /// update the status of a show **in the DB**
-pub fn update_show(show: &TraktShow) {
+pub fn update_show(show: &TraktShow) -> eyre::Result<()> {
     use self::trakt_shows::dsl::*;
 
     let mut ctx = establish_ctx();
 
     match diesel::insert_into(trakt_shows)
         .values(show)
-        .returning(TraktShow::as_returning())
         .on_conflict(imdb_id)
         .do_update()
         .set(user_status.eq(&show.user_status))
@@ -60,15 +59,17 @@ pub fn update_show(show: &TraktShow) {
     {
         Ok(_) => {
             info!("Updated row: {}", &show.imdb_id);
+            Ok(())
         }
         Err(err) => {
             info!("panik on update: {}", err);
+            Err(eyre::eyre!(err))
         }
     }
 }
 
 /// Overwrites (or fills) db with the rows parsed from an IMDB data dump.
-pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
+pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) -> eyre::Result<()> {
     info!("Filling db...");
 
     use self::trakt_shows::dsl::*;
@@ -76,7 +77,6 @@ pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
     for row in rows {
         match diesel::insert_into(trakt_shows)
             .values(row)
-            .returning(TraktShow::as_returning())
             .on_conflict(imdb_id)
             .do_update()
             // update the values that might be updated in a new data dump
@@ -94,10 +94,12 @@ pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) {
             Err(err) => {
                 // TODO: if this errs, should bubble up and quit app?
                 info!("Failed db insert: {}", err);
-                panic!();
+                return Err(eyre::eyre!(err));
             }
         }
     }
 
     info!("Inserted/Updated {} rows.", rows.len());
+
+    Ok(())
 }

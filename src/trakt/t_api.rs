@@ -74,7 +74,7 @@ pub struct ApiSeasonDetails {
 
 /// Creates a single HTTP client to use for trakt.tv requests
 pub fn establish_http_client() -> Client {
-    // TODO: anyhow/error handle this (as part of app startup?)
+    // TODO: eyre/error handle this (as part of app startup?)
     dotenv().ok();
 
     let mut headers = header::HeaderMap::new();
@@ -112,7 +112,7 @@ pub fn establish_http_client() -> Client {
         .unwrap()
 }
 
-async fn do_req(client: &reqwest::Client, endpoint: &str) -> anyhow::Result<String> {
+async fn do_req(client: &reqwest::Client, endpoint: &str) -> eyre::Result<String> {
     let search_url = format!("{}/{}", TRAKT_URL, endpoint);
 
     let response = client.get(search_url).send().await?;
@@ -125,7 +125,7 @@ async fn do_req(client: &reqwest::Client, endpoint: &str) -> anyhow::Result<Stri
 async fn query_show_info(
     client: &reqwest::Client,
     imdb_id: &String,
-) -> anyhow::Result<ApiShowDetails> {
+) -> eyre::Result<ApiShowDetails> {
     let text = do_req(client, &format!("shows/{}?extended=full", imdb_id)).await?;
     Ok(serde_json::from_str::<ApiShowDetails>(&text)?)
 }
@@ -133,7 +133,7 @@ async fn query_show_info(
 async fn query_season_info(
     client: &reqwest::Client,
     imdb_id: &String,
-) -> anyhow::Result<Vec<ApiSeasonDetails>> {
+) -> eyre::Result<Vec<ApiSeasonDetails>> {
     let text = do_req(client, &format!("shows/{}/seasons?extended=full", imdb_id)).await?;
     Ok(serde_json::from_str::<Vec<ApiSeasonDetails>>(&text)?)
 }
@@ -143,7 +143,7 @@ async fn query_season_info(
 pub async fn query_detailed(
     client: &reqwest::Client,
     imdb_id: &String,
-) -> anyhow::Result<(ApiShowDetails, Vec<ApiSeasonDetails>)> {
+) -> eyre::Result<(ApiShowDetails, Vec<ApiSeasonDetails>)> {
     let show_info = query_show_info(client, &imdb_id).await?;
     let season_info = query_season_info(client, &imdb_id).await?;
     Ok((show_info, season_info))

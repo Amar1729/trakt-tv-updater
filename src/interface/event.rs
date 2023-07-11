@@ -1,4 +1,3 @@
-use crate::interface::app::AppResult;
 use crossterm::event::{self, Event as CrosstermEvent, KeyEvent, MouseEvent};
 use std::sync::mpsc;
 use std::thread;
@@ -71,7 +70,7 @@ impl EventHandler {
     ///
     /// This function will always block the current thread if
     /// there is no data available and it's possible for more data to be sent.
-    pub fn next(&self) -> AppResult<Event> {
+    pub fn next(&self) -> eyre::Result<Event> {
         Ok(self.receiver.recv()?)
     }
 }

@@ -1,11 +1,11 @@
-use crate::interface::app::{App, AppMode, AppResult};
+use crate::interface::app::{App, AppMode};
 use crossterm::event::{Event as CrosstermEvent, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::event::{MouseEvent, MouseEventKind};
 
 use tui_input::backend::crossterm::EventHandler;
 
 /// Handles the key events and updates the state of [`App`].
-pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
+pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> eyre::Result<()> {
     // Exit application from any mode on `Ctrl-C`
     match key_event.code {
         KeyCode::Char('c') | KeyCode::Char('C') => {
@@ -55,12 +55,12 @@ pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<
                 app.mode = AppMode::Querying;
             }
             // cycle through watch status for a show
-            KeyCode::Char(' ') => app.toggle_watch_status(),
+            KeyCode::Char(' ') => app.toggle_watch_status()?,
 
             // open up tv show details view
             KeyCode::Char('l') | KeyCode::Right => {
                 // app will only change its UI if a show is selected.
-                app.enter_show_details().await;
+                app.enter_show_details().await?;
             }
 
             _ => {}
@@ -90,7 +90,7 @@ pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<
 }
 
 // handle mouse events as well
-pub fn handle_mouse_events(mouse_event: MouseEvent, app: &mut App) -> AppResult<()> {
+pub fn handle_mouse_events(mouse_event: MouseEvent, app: &mut App) -> eyre::Result<()> {
     match app.mode {
         AppMode::MainView => match mouse_event.kind {
             MouseEventKind::ScrollDown => {

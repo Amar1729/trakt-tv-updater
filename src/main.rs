@@ -11,14 +11,18 @@ use simplelog::*;
 use std::fs::File;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> eyre::Result<()> {
+    color_eyre::install()?;
+
     // init logging
     WriteLogger::init(
         LevelFilter::Debug,
-        Config::default(),
+        ConfigBuilder::default()
+            .set_location_level(simplelog::LevelFilter::Info)
+            .build(),
         File::create("trakt_updater.log").unwrap(),
     )
     .unwrap();
 
-    let _ = interface::run().await;
+    interface::run().await
 }
