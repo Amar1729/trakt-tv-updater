@@ -20,21 +20,21 @@ pub mod imdb_reader;
 /// Load all shows from imdb data dump and db.
 /// TODO: for now, assume that first startup fills all rows into db.
 /// Eventually, we may have to update this to update db on startup from a new data dump.
-fn load_combined_data_sources(ctx: &mut SqliteConnection) -> eyre::Result<Vec<TraktShow>> {
+fn load_combined_data_sources(db: &mut t_db::Database) -> eyre::Result<Vec<TraktShow>> {
     // load all shows, and fill db if db is empty
     // let items = imdb_reader::load_show_vec();
 
-    let row_count = t_db::count_trakt_db(ctx);
+    let row_count = db.count_shows();
     info!("row count: {}", row_count);
 
     if row_count < 100 {
         // if we dont have many rows in db (clean env or devel), load from imdb data
         let items = imdb_reader::load_show_vec();
         // TODO: put this on a thread, once i figure out borrowing?
-        t_db::prefill_db_from_imdb(ctx, &items).map(|()| items)
+        db.prefill_from_imdb(&items).map(|()| items)
     } else {
         // query everything from db
-        Ok(t_db::load_filtered_shows(ctx))
+        Ok(db.filtered_shows())
     }
 }
 
@@ -48,8 +48,8 @@ pub struct DataManager {
 
 impl DataManager {
     pub fn init() -> eyre::Result<DataManager> {
-        let mut ctx = t_db::establish_ctx();
-        let items = load_combined_data_sources(&mut ctx)?;
+        let mut db = t_db::Database::connect()?;
+        let items = load_combined_data_sources(&mut db)?;
         let (query_sender, query_receiver) = crossbeam::channel::unbounded();
         let (result_sender, result_receiver) = crossbeam::channel::unbounded();
 

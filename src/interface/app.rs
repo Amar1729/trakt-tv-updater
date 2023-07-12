@@ -164,7 +164,7 @@ impl App {
             };
 
             // update db
-            t_db::update_show(show)?;
+            t_db::Database::connect()?.update_show(show)?;
         }
 
         Ok(())
