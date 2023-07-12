@@ -1,5 +1,5 @@
 use crate::{
-    models::{TraktShow, UserStatusSeason, UserStatusShow, TraktSeason},
+    models::{TraktSeason, TraktShow, UserStatusSeason, UserStatusShow},
     sources::DataManager,
     trakt::{t_api, t_db},
 };
@@ -163,7 +163,7 @@ impl App {
             };
 
             // Update database
-            t_db::update_season(season)?;
+            t_db::Database::connect()?.update_season(season)?;
         }
 
         Ok(())
@@ -182,7 +182,7 @@ impl App {
             };
 
             // update db
-            t_db::update_show(show)?;
+            t_db::Database::connect()?.update_show(show)?;
         }
 
         Ok(())
@@ -205,10 +205,12 @@ impl App {
                         show.trakt_id = Some(show_details.ids.trakt as i32);
                         // let _ = t_db::update_show(show);
                     }
-                    let _ = t_db::update_show(&show);
+                    let mut db = t_db::Database::connect()?;
+
+                    let _ = db.update_show(&show)?;
 
                     // insert the seasons of a show
-                    self.show_view.seasons = t_db::update_show_with_seasons(show, &api_seasons)?;
+                    self.show_view.seasons = db.update_show_with_seasons(show, &api_seasons)?;
 
                     if !api_seasons.is_empty() {
                         self.show_view.season_table_state.select(Some(0));
