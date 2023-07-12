@@ -10,7 +10,6 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4.26", default-features = false, features = ["clock", "std", "serde"] }
 color-eyre = "0.6"
-crossbeam = { version = "0.8.2", features = ["crossbeam-channel"] }
 crossterm = "0.26.1"
 csv = "1.2.2"
 diesel = { version = "2.1.0", features = ["sqlite", "chrono", "returning_clauses_for_sqlite_3_35"] }
@@ -25,7 +24,7 @@ reqwest = { version = "0.11.18", features = ["json"] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde_json = "1.0.99"
 simplelog = "0.12.1"
-tokio = { version = "1.29.1", features = ["full"] }
+tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread", "sync"] }
 tui-input = "0.7.1"
 
 [dependencies.ratatui]

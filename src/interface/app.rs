@@ -50,6 +50,9 @@ pub struct App {
     /// for querying trakt
     pub client: Client,
 
+    /// local cache of imdb + trakt data
+    pub cache: t_db::Database,
+
     /// ui+handling changes based on the app's current view
     pub mode: AppMode,
 
@@ -65,16 +68,17 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new() -> eyre::Result<Self> {
+    pub async fn new() -> eyre::Result<Self> {
         // when a new app is created, begin a bg data manager task
         // this task will receive a string query, and send back a TraktShow vec
-        let data_manager = DataManager::init()?;
+        let data_manager = DataManager::init().await?;
 
         Ok(App {
             running: true,
             data_manager,
 
             client: t_api::establish_http_client(),
+            cache: t_db::Database::connect().await?,
 
             input: Input::default(),
             mode: AppMode::default(),
@@ -87,13 +91,14 @@ impl App {
     }
 
     /// Handles the tick event of the terminal.
-    pub fn tick(&mut self) -> eyre::Result<()> {
+    pub async fn tick(&mut self) -> eyre::Result<()> {
         // WIP implementation of query from our data rows
         // (right now, just pull everything on boot)
         if self.shows.is_empty() {
             let items = self
                 .data_manager
                 .query(String::from("spurious"))
+                .await
                 .ok_or_else(|| {
                     error!("data manager thread panicked!");
                     eyre::eyre!("data manager thread panicked!")
@@ -151,7 +156,7 @@ impl App {
     }
 
     /// Cycle the watch status of a currently-selected season (similar to toggle_watch_status)
-    pub fn toggle_season_watch_status(&mut self) -> eyre::Result<()> {
+    pub async fn toggle_season_watch_status(&mut self) -> eyre::Result<()> {
         if let Some(i) = self.show_view.season_table_state.selected() {
             let season = &mut self.show_view.seasons[i];
             info!("Currently selected season: {:?}", season);
@@ -163,14 +168,14 @@ impl App {
             };
 
             // Update database
-            t_db::Database::connect()?.update_season(season)?;
+            self.cache.update_season(season.clone()).await?;
         }
 
         Ok(())
     }
 
     /// Cycle watch status of a currently-selected show in main window
-    pub fn toggle_watch_status(&mut self) -> eyre::Result<()> {
+    pub async fn toggle_watch_status(&mut self) -> eyre::Result<()> {
         if let Some(i) = self.table_state.selected() {
             let show = &mut self.shows[i];
             info!("Currently selected show: {:?}", show);
@@ -182,7 +187,10 @@ impl App {
             };
 
             // update db
-            t_db::Database::connect()?.update_show(show)?;
+            t_db::Database::connect()
+                .await?
+                .update_show(show.clone())
+                .await?;
         }
 
         Ok(())
@@ -205,12 +213,11 @@ impl App {
                         show.trakt_id = Some(show_details.ids.trakt as i32);
                         // let _ = t_db::update_show(show);
                     }
-                    let mut db = t_db::Database::connect()?;
 
-                    let _ = db.update_show(&show)?;
+                    let _ = self.cache.update_show(show.clone()).await?;
 
                     // insert the seasons of a show
-                    self.show_view.seasons = db.update_show_with_seasons(show, &api_seasons)?;
+                    self.show_view.seasons = self.cache.update_show_with_seasons(show, &api_seasons).await?;
 
                     if !api_seasons.is_empty() {
                         self.show_view.season_table_state.select(Some(0));
