@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::models::TraktShow;
 
 /// currently unimpl'd: will be used to download IMDB dataset on init
-pub fn download_source() {
+pub fn _download_source() {
     unimplemented!();
 }
 

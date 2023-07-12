@@ -3,7 +3,6 @@ use crate::{
     sources::DataManager,
     trakt::{t_api, t_db},
 };
-use crossbeam::channel::{unbounded, Receiver, SendError, Sender};
 use log::*;
 use ratatui::widgets::{ScrollbarState, TableState};
 use reqwest::Client;
@@ -20,6 +19,7 @@ pub enum AppMode {
     /// somewhat of a todo state, i haven't impl'd searching yet
     Querying,
     /// Show keybindings
+    #[allow(dead_code)]
     HelpWindow,
     /// Detailed view of specific season
     SeasonView,

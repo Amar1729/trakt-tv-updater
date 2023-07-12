@@ -149,7 +149,8 @@ pub async fn query_detailed(
     Ok((show_info, season_info))
 }
 
-pub async fn fill_trakt_db_from_imdb(ctx: &mut SqliteConnection, imdb_id: u32) {
+#[allow(unused)]
+pub async fn fill_trakt_db_from_imdb(_ctx: &mut SqliteConnection, _imdb_id: u32) {
     let lim = RateLimiter::direct(Quota::per_second(nonzero!(RATE_LIMIT)));
 
     // until_ready should block until the limiter is ready to submit another job, right?
@@ -180,6 +181,7 @@ pub async fn fill_trakt_db_from_imdb(ctx: &mut SqliteConnection, imdb_id: u32) {
     unimplemented!();
 }
 
+#[cfg(tests)]
 mod tests {
     #[test]
     fn check_rate_limit() {
