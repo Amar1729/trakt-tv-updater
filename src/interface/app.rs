@@ -51,6 +51,9 @@ pub struct App {
     /// for querying trakt
     pub client: Client,
 
+    /// local cache of imdb + trakt data
+    pub cache: t_db::Database,
+
     /// ui+handling changes based on the app's current view
     pub mode: AppMode,
 
@@ -66,16 +69,17 @@ pub struct App {
 
 impl App {
     /// Constructs a new instance of [`App`].
-    pub fn new() -> eyre::Result<Self> {
+    pub async fn new() -> eyre::Result<Self> {
         // when a new app is created, begin a bg data manager task
         // this task will receive a string query, and send back a TraktShow vec
-        let data_manager = DataManager::init()?;
+        let data_manager = DataManager::init().await?;
 
         Ok(App {
             running: true,
             data_manager,
 
             client: t_api::establish_http_client(),
+            cache: t_db::Database::connect().await?,
 
             input: Input::default(),
             mode: AppMode::default(),
@@ -88,13 +92,14 @@ impl App {
     }
 
     /// Handles the tick event of the terminal.
-    pub fn tick(&mut self) -> eyre::Result<()> {
+    pub async fn tick(&mut self) -> eyre::Result<()> {
         // WIP implementation of query from our data rows
         // (right now, just pull everything on boot)
         if self.shows.is_empty() {
             let items = self
                 .data_manager
                 .query(String::from("spurious"))
+                .await
                 .ok_or_else(|| {
                     error!("data manager thread panicked!");
                     eyre::eyre!("data manager thread panicked!")
@@ -152,7 +157,7 @@ impl App {
     }
 
     /// Cycle watch status of a currently-selected show in main window
-    pub fn toggle_watch_status(&mut self) -> eyre::Result<()> {
+    pub async fn toggle_watch_status(&mut self) -> eyre::Result<()> {
         if let Some(i) = self.table_state.selected() {
             let show = &mut self.shows[i];
             info!("Currently selected show: {:?}", show);
@@ -164,7 +169,10 @@ impl App {
             };
 
             // update db
-            t_db::Database::connect()?.update_show(show)?;
+            t_db::Database::connect()
+                .await?
+                .update_show(show.clone())
+                .await?;
         }
 
         Ok(())
