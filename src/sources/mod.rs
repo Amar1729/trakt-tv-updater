@@ -3,7 +3,7 @@ use diesel::SqliteConnection;
 use log::*;
 
 use crate::models::TraktShow;
-use crate::trakt::{t_api, t_db};
+use crate::trakt::t_db;
 
 pub mod imdb_reader;
 
@@ -40,6 +40,7 @@ fn load_combined_data_sources(ctx: &mut SqliteConnection) -> eyre::Result<Vec<Tr
 
 #[derive(Debug)]
 pub struct DataManager {
+    #[allow(dead_code)]
     handle: std::thread::JoinHandle<()>,
     query_sender: Sender<String>,
     result_receiver: Receiver<Vec<TraktShow>>,

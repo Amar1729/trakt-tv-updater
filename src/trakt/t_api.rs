@@ -144,12 +144,13 @@ pub async fn query_detailed(
     client: &reqwest::Client,
     imdb_id: &String,
 ) -> eyre::Result<(ApiShowDetails, Vec<ApiSeasonDetails>)> {
-    let show_info = query_show_info(client, &imdb_id).await?;
-    let season_info = query_season_info(client, &imdb_id).await?;
+    let show_info = query_show_info(client, imdb_id).await?;
+    let season_info = query_season_info(client, imdb_id).await?;
     Ok((show_info, season_info))
 }
 
-pub async fn fill_trakt_db_from_imdb(ctx: &mut SqliteConnection, imdb_id: u32) {
+#[allow(unused)]
+pub async fn fill_trakt_db_from_imdb(_ctx: &mut SqliteConnection, _imdb_id: u32) {
     let lim = RateLimiter::direct(Quota::per_second(nonzero!(RATE_LIMIT)));
 
     // until_ready should block until the limiter is ready to submit another job, right?
@@ -158,17 +159,14 @@ pub async fn fill_trakt_db_from_imdb(ctx: &mut SqliteConnection, imdb_id: u32) {
     //
     // keeping this around so i remember how to use it
     loop {
-        match lim.check() {
-            Ok(_) => {
-                // for api_show in query_trakt_api(&client, tmdb_id).await {
-                //     println!("querying...");
-                //     // shows.push(api_show)
-                //     write_trakt_db(ctx, api_show);
-                // }
+        if lim.check().is_ok() {
+            // for api_show in query_trakt_api(&client, tmdb_id).await {
+            //     println!("querying...");
+            //     // shows.push(api_show)
+            //     write_trakt_db(ctx, api_show);
+            // }
 
-                break;
-            }
-            Err(_) => {}
+            break;
         }
 
         thread::sleep(TIME_STEP);
@@ -180,6 +178,7 @@ pub async fn fill_trakt_db_from_imdb(ctx: &mut SqliteConnection, imdb_id: u32) {
     unimplemented!();
 }
 
+#[cfg(tests)]
 mod tests {
     #[test]
     fn check_rate_limit() {

@@ -125,7 +125,7 @@ fn render_main_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
     render_shows_table(app, frame, outer[1]);
 }
 
-fn initalize_app<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
+fn initalize_app<B: Backend>(_app: &mut App, frame: &mut Frame<'_, B>) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(

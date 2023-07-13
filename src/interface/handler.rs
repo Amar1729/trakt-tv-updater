@@ -91,6 +91,7 @@ pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> eyre::Resu
 
 // handle mouse events as well
 pub fn handle_mouse_events(mouse_event: MouseEvent, app: &mut App) -> eyre::Result<()> {
+    #[allow(clippy::single_match)]
     match app.mode {
         AppMode::MainView => match mouse_event.kind {
             MouseEventKind::ScrollDown => {

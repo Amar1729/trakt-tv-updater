@@ -3,7 +3,6 @@ use crate::{
     sources::DataManager,
     trakt::{t_api, t_db},
 };
-use crossbeam::channel::{unbounded, Receiver, SendError, Sender};
 use log::*;
 use ratatui::widgets::{ScrollbarState, TableState};
 use reqwest::Client;
@@ -20,6 +19,7 @@ pub enum AppMode {
     /// somewhat of a todo state, i haven't impl'd searching yet
     Querying,
     /// Show keybindings
+    #[allow(dead_code)]
     HelpWindow,
     /// Detailed view of specific season
     SeasonView,
@@ -91,7 +91,7 @@ impl App {
     pub fn tick(&mut self) -> eyre::Result<()> {
         // WIP implementation of query from our data rows
         // (right now, just pull everything on boot)
-        if self.shows.len() == 0 {
+        if self.shows.is_empty() {
             let items = self
                 .data_manager
                 .query(String::from("spurious"))
@@ -179,7 +179,7 @@ impl App {
                     // t_db::update_show_info(&ctx ...);
 
                     self.show_view.show_details = Some(show_details);
-                    if season_details.len() > 0 {
+                    if !season_details.is_empty() {
                         self.show_view.season_table_state.select(Some(0));
                     }
                     self.show_view.seasons = season_details;

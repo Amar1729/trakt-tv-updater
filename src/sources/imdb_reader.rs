@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::models::TraktShow;
 
 /// currently unimpl'd: will be used to download IMDB dataset on init
-pub fn download_source() {
+pub fn _download_source() {
     unimplemented!();
 }
 
@@ -48,10 +48,7 @@ fn load_show_vec_from_source(dump_file_name: &str) -> Vec<TraktShow> {
             trakt_id: None,
             primary_title: show.primary_title.unwrap(),
             original_title: show.original_title.unwrap(),
-            release_year: match show.start_year {
-                Some(expr) => Some(expr as i32),
-                None => None,
-            },
+            release_year: show.start_year.map(|y| y as i32),
             no_seasons: None,
             no_episodes: None,
             country: None,
