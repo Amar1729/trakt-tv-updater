@@ -2,7 +2,7 @@
 
 diesel::table! {
     episodes (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         show_id -> Integer,
         season_number -> Integer,
         episode_number -> Integer,
@@ -15,7 +15,7 @@ diesel::table! {
 
 diesel::table! {
     seasons (id) {
-        id -> Nullable<Integer>,
+        id -> Integer,
         show_id -> Integer,
         season_number -> Integer,
         user_status -> Text,

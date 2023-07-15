@@ -1,4 +1,4 @@
-use super::schema::trakt_shows;
+use super::schema::{episodes, seasons, trakt_shows};
 
 use diesel::prelude::*;
 
@@ -51,4 +51,14 @@ pub struct TraktShow {
     pub no_seasons: Option<i32>,
     pub no_episodes: Option<i32>,
     pub user_status: UserStatusShow,
+}
+
+#[derive(Clone, Debug, Queryable, Selectable, Insertable, PartialEq)]
+#[diesel(table_name = seasons)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct TraktSeason {
+    pub id: i32,
+    pub show_id: i32,
+    pub season_number: i32,
+    pub user_status: String,
 }

@@ -13,7 +13,7 @@ CREATE TABLE trakt_shows (
 
 CREATE TABLE seasons (
     -- trakt_id
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY NOT NULL,
     show_id INTEGER NOT NULL,
     season_number INTEGER NOT NULL,
     user_status TEXT CHECK(user_status IN ('unfilled', 'on_release', 'other_date')) NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE seasons (
 
 CREATE TABLE episodes (
     -- trakt_id
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY NOT NULL,
     show_id INTEGER NOT NULL,
     season_number INTEGER NOT NULL,
     episode_number INTEGER NOT NULL,
