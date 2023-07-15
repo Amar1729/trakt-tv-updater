@@ -53,7 +53,7 @@ fn load_show_vec_from_source(dump_file_name: &str) -> Vec<TraktShow> {
             no_episodes: None,
             country: None,
             network: None,
-            user_status: crate::models::UserStatus::Todo,
+            user_status: crate::models::UserStatusShow::Todo,
         })
         .collect()
 }

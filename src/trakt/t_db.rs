@@ -1,4 +1,4 @@
-use crate::models::{TraktShow, UserStatus};
+use crate::models::{TraktShow, UserStatusShow};
 use crate::schema::trakt_shows;
 
 use chrono::prelude::*;
@@ -38,7 +38,7 @@ pub fn load_filtered_shows(ctx: &mut SqliteConnection) -> Vec<TraktShow> {
     trakt_shows::table
         .order_by(trakt_shows::release_year)
         .filter(trakt_shows::release_year.le(cap_year))
-        .filter(trakt_shows::user_status.ne(UserStatus::Unwatched))
+        .filter(trakt_shows::user_status.ne(UserStatusShow::Unwatched))
         .select(TraktShow::as_returning())
         .load(ctx)
         .unwrap()

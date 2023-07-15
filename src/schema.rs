@@ -1,14 +1,29 @@
 // @generated automatically by Diesel CLI.
-// with UserStatusMapping, this has been manually updated.
-// (provided by diesel_derive_enum)
 
 diesel::table! {
-    use diesel::sql_types::{
-        Text,
-        Nullable,
-        Integer,
-    };
-    use crate::models::UserStatusMapping;
+    episodes (id) {
+        id -> Nullable<Integer>,
+        show_id -> Integer,
+        season_number -> Integer,
+        episode_number -> Integer,
+        title -> Text,
+        first_aired -> Nullable<Timestamp>,
+        watched_at -> Nullable<Timestamp>,
+        user_status -> crate::models::UserStatusEpisodeMapping,
+    }
+}
+
+diesel::table! {
+    seasons (id) {
+        id -> Nullable<Integer>,
+        show_id -> Integer,
+        season_number -> Integer,
+        user_status -> Text,
+        // user_status -> crate::models::UserStatusSeasonMapping,
+    }
+}
+
+diesel::table! {
     trakt_shows (imdb_id) {
         imdb_id -> Text,
         trakt_id -> Nullable<Integer>,
@@ -19,6 +34,10 @@ diesel::table! {
         network -> Nullable<Text>,
         no_seasons -> Nullable<Integer>,
         no_episodes -> Nullable<Integer>,
-        user_status -> UserStatusMapping,
+        user_status -> crate::models::UserStatusShowMapping,
     }
 }
+
+diesel::joinable!(episodes -> seasons (show_id));
+
+diesel::allow_tables_to_appear_in_same_query!(episodes, seasons, trakt_shows,);

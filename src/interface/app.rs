@@ -1,5 +1,5 @@
 use crate::{
-    models::{TraktShow, UserStatus},
+    models::{TraktShow, UserStatusShow},
     sources::DataManager,
     trakt::{t_api, t_db},
 };
@@ -158,9 +158,9 @@ impl App {
             info!("Currently selected show: {:?}", show);
 
             show.user_status = match show.user_status {
-                UserStatus::Todo => UserStatus::Watched,
-                UserStatus::Watched => UserStatus::Unwatched,
-                UserStatus::Unwatched => UserStatus::Todo,
+                UserStatusShow::Todo => UserStatusShow::Watched,
+                UserStatusShow::Watched => UserStatusShow::Unwatched,
+                UserStatusShow::Unwatched => UserStatusShow::Todo,
             };
 
             // update db

@@ -9,22 +9,28 @@ macro_rules! ratatui_line {
 }
 
 #[derive(Clone, Debug, PartialEq, diesel_derive_enum::DbEnum)]
-pub enum UserStatus {
+pub enum UserStatusEpisode {
+    Unwatched,
+    Watched,
+}
+
+#[derive(Clone, Debug, PartialEq, diesel_derive_enum::DbEnum)]
+pub enum UserStatusShow {
     Unwatched,
     Todo,
     Watched,
 }
 
-impl From<UserStatus> for ratatui::text::Text<'_> {
-    fn from(value: UserStatus) -> Self {
+impl From<UserStatusShow> for ratatui::text::Text<'_> {
+    fn from(value: UserStatusShow) -> Self {
         match value {
-            UserStatus::Unwatched => Self {
+            UserStatusShow::Unwatched => Self {
                 lines: ratatui_line!("UNWATCHED"),
             },
-            UserStatus::Todo => Self {
+            UserStatusShow::Todo => Self {
                 lines: ratatui_line!("TODO"),
             },
-            UserStatus::Watched => Self {
+            UserStatusShow::Watched => Self {
                 lines: ratatui_line!("WATCHED"),
             },
         }
@@ -44,5 +50,5 @@ pub struct TraktShow {
     pub network: Option<String>,
     pub no_seasons: Option<i32>,
     pub no_episodes: Option<i32>,
-    pub user_status: UserStatus,
+    pub user_status: UserStatusShow,
 }
