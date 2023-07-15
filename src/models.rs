@@ -2,6 +2,12 @@ use super::schema::trakt_shows;
 
 use diesel::prelude::*;
 
+macro_rules! ratatui_line {
+    ($line:expr) => {
+        vec![ratatui::text::Line::from($line.to_string())]
+    };
+}
+
 #[derive(Clone, Debug, PartialEq, diesel_derive_enum::DbEnum)]
 pub enum UserStatus {
     Unwatched,
@@ -13,13 +19,13 @@ impl From<UserStatus> for ratatui::text::Text<'_> {
     fn from(value: UserStatus) -> Self {
         match value {
             UserStatus::Unwatched => Self {
-                lines: vec![ratatui::text::Line::from("UNWATCHED".to_string())],
+                lines: ratatui_line!("UNWATCHED"),
             },
             UserStatus::Todo => Self {
-                lines: vec![ratatui::text::Line::from("TODO".to_string())],
+                lines: ratatui_line!("TODO"),
             },
             UserStatus::Watched => Self {
-                lines: vec![ratatui::text::Line::from("WATCHED".to_string())],
+                lines: ratatui_line!("WATCHED"),
             },
         }
     }
