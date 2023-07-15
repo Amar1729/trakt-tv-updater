@@ -1,5 +1,5 @@
-use crate::models::{TraktShow, UserStatusShow};
-use crate::schema::trakt_shows;
+use crate::models::{TraktSeason, TraktShow, UserStatusShow};
+use crate::schema::{seasons, trakt_shows};
 
 use chrono::prelude::*;
 use log::*;
@@ -7,6 +7,8 @@ use std::env;
 
 use diesel::prelude::*;
 use dotenvy::dotenv;
+
+use super::t_api::ApiSeasonDetails;
 
 pub fn establish_ctx() -> SqliteConnection {
     dotenv().ok();
@@ -54,7 +56,10 @@ pub fn update_show(show: &TraktShow) -> eyre::Result<()> {
         .values(show)
         .on_conflict(imdb_id)
         .do_update()
-        .set(user_status.eq(&show.user_status))
+        .set((
+            trakt_id.eq(&show.trakt_id),
+            user_status.eq(&show.user_status),
+        ))
         .execute(&mut ctx)
     {
         Ok(_) => {
@@ -66,6 +71,45 @@ pub fn update_show(show: &TraktShow) -> eyre::Result<()> {
             Err(eyre::eyre!(err))
         }
     }
+}
+
+/// Update a show with details and seasons
+pub fn update_show_details(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -> eyre::Result<()> {
+    use self::seasons::dsl::*;
+
+    let mut ctx = establish_ctx();
+
+    info!("Adding show details and seasons");
+
+    for season in api_seasons {
+        let trakt_season = TraktSeason {
+            id: season.ids.trakt as i32,
+            show_id: show.trakt_id.unwrap() as i32,
+            season_number: season.number as i32,
+            user_status: String::from("unfilled"),
+        };
+
+        match diesel::insert_into(seasons)
+            .values(trakt_season.clone())
+            .on_conflict(id)
+            .do_update()
+            .set((season_number.eq(trakt_season.season_number),))
+            .execute(&mut ctx)
+        {
+            Ok(_) => {
+                info!(
+                    "Updated show season: {} {}",
+                    &show.imdb_id, &season.ids.trakt
+                );
+            }
+            Err(err) => {
+                error!("Failed db insert {}", err);
+                return Err(eyre::eyre!(err));
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Overwrites (or fills) db with the rows parsed from an IMDB data dump.

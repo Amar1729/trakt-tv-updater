@@ -23,7 +23,7 @@ const TRAKT_URL: &str = "http://127.0.0.1:8080";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ApiIDs {
-    trakt: u32,
+    pub trakt: u32,
     slug: Option<String>,
     imdb: Option<String>,
     // skipping other unimportant IDs

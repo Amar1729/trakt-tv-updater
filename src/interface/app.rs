@@ -171,12 +171,19 @@ impl App {
     }
 
     pub async fn enter_show_details(&mut self) -> eyre::Result<()> {
+        // when a user attempts to view details for a show, we query its details and season info
+        // and write back to local
         if self.mode == AppMode::MainView && let Some(i) = self.table_state.selected() {
-            let show = &self.shows[i];
+            let show = &mut self.shows[i];
             match t_api::query_detailed(&self.client, &show.imdb_id).await {
                 Ok((show_details, season_details)) => {
-                    // TODO - when i have these, add them to the db
-                    // t_db::update_show_info(&ctx ...);
+                    // update a show's trakt_id in the db if show.trakt_id is currently None
+                    if show.trakt_id == None {
+                        show.trakt_id = Some(show_details.ids.trakt as i32);
+                        let _ = t_db::update_show(show);
+                    }
+                    // insert the seasons of a show
+                    let _ = t_db::update_show_details(show, &season_details);
 
                     self.show_view.show_details = Some(show_details);
                     if !season_details.is_empty() {
