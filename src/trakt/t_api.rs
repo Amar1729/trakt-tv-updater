@@ -1,5 +1,8 @@
 use chrono::{DateTime, Utc};
-use std::{env, thread, time};
+use std::{
+    env, thread,
+    time::{self, Duration},
+};
 
 use diesel::prelude::*;
 use dotenvy::dotenv;
@@ -108,6 +111,7 @@ pub fn establish_http_client() -> Client {
     reqwest::Client::builder()
         .user_agent(APP_USER_AGENT)
         .default_headers(headers)
+        .timeout(Duration::from_secs(5))
         .build()
         .unwrap()
 }
