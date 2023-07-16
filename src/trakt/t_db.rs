@@ -1,4 +1,4 @@
-use crate::models::{TraktSeason, TraktShow, UserStatusShow};
+use crate::models::{TraktSeason, TraktShow, UserStatusSeason, UserStatusShow};
 use crate::schema::{seasons, trakt_shows};
 
 use chrono::prelude::*;
@@ -86,7 +86,7 @@ pub fn update_show_details(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -
             id: season.ids.trakt as i32,
             show_id: show.trakt_id.unwrap() as i32,
             season_number: season.number as i32,
-            user_status: String::from("unfilled"),
+            user_status: UserStatusSeason::Unfilled,
         };
 
         match diesel::insert_into(seasons)

@@ -9,6 +9,29 @@ macro_rules! ratatui_line {
 }
 
 #[derive(Clone, Debug, PartialEq, diesel_derive_enum::DbEnum)]
+pub enum UserStatusSeason {
+    Unfilled,
+    OnRelease,
+    OtherDate,
+}
+
+impl From<UserStatusSeason> for ratatui::text::Text<'_> {
+    fn from(value: UserStatusSeason) -> Self {
+        match value {
+            UserStatusSeason::Unfilled => Self {
+                lines: ratatui_line!("UNFILLED"),
+            },
+            UserStatusSeason::OnRelease => Self {
+                lines: ratatui_line!("ON_RELEASE"),
+            },
+            UserStatusSeason::OtherDate => Self {
+                lines: ratatui_line!("OTHER_DATE"),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, diesel_derive_enum::DbEnum)]
 pub enum UserStatusEpisode {
     Unwatched,
     Watched,
@@ -60,5 +83,5 @@ pub struct TraktSeason {
     pub id: i32,
     pub show_id: i32,
     pub season_number: i32,
-    pub user_status: String,
+    pub user_status: UserStatusSeason,
 }

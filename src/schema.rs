@@ -18,8 +18,7 @@ diesel::table! {
         id -> Integer,
         show_id -> Integer,
         season_number -> Integer,
-        user_status -> Text,
-        // user_status -> crate::models::UserStatusSeasonMapping,
+        user_status -> crate::models::UserStatusSeasonMapping,
     }
 }
 
