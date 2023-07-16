@@ -177,11 +177,16 @@ impl App {
             let show = &mut self.shows[i];
             match t_api::query_detailed(&self.client, &show.imdb_id).await {
                 Ok((show_details, season_details)) => {
+                    // update a show's overview
+                    show.overview = Some(show_details.overview.clone());
+
                     // update a show's trakt_id in the db if show.trakt_id is currently None
                     if show.trakt_id == None {
                         show.trakt_id = Some(show_details.ids.trakt as i32);
-                        let _ = t_db::update_show(show);
+                        // let _ = t_db::update_show(show);
                     }
+                    let _ = t_db::update_show(&show);
+
                     // insert the seasons of a show
                     let _ = t_db::update_show_details(show, &season_details);
 

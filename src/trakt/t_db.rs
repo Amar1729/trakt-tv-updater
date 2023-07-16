@@ -59,6 +59,7 @@ pub fn update_show(show: &TraktShow) -> eyre::Result<()> {
         .set((
             trakt_id.eq(&show.trakt_id),
             user_status.eq(&show.user_status),
+            overview.eq(&show.overview),
         ))
         .execute(&mut ctx)
     {

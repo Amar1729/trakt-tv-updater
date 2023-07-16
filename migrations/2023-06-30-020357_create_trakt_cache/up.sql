@@ -8,6 +8,7 @@ CREATE TABLE trakt_shows (
     network VARCHAR,
     no_seasons INTEGER,
     no_episodes INTEGER,
+    overview TEXT,
     user_status TEXT CHECK(user_status IN ('unwatched', 'todo', 'watched')) NOT NULL
 );
 

@@ -33,6 +33,7 @@ diesel::table! {
         network -> Nullable<Text>,
         no_seasons -> Nullable<Integer>,
         no_episodes -> Nullable<Integer>,
+        overview -> Nullable<Text>,
         user_status -> crate::models::UserStatusShowMapping,
     }
 }
