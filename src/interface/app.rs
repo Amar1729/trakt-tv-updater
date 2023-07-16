@@ -1,8 +1,8 @@
-use crate::{
-    models::{TraktSeason, TraktShow, UserStatusSeason, UserStatusShow},
-    sources::DataManager,
-    trakt::{t_api, t_db},
-};
+use crate::models::{TraktSeason, TraktShow, UserStatusSeason, UserStatusShow};
+use crate::sources::DataManager;
+use crate::trakt::t_api;
+use crate::trakt::t_db::{self, Database};
+
 use log::*;
 use ratatui::widgets::{ScrollbarState, TableState};
 use reqwest::Client;
@@ -51,7 +51,7 @@ pub struct App {
     pub client: Client,
 
     /// local cache of imdb + trakt data
-    pub cache: t_db::Database,
+    pub cache: t_db::PersistentDb,
 
     /// ui+handling changes based on the app's current view
     pub mode: AppMode,
@@ -78,7 +78,7 @@ impl App {
             data_manager,
 
             client: t_api::establish_http_client(),
-            cache: t_db::Database::connect().await?,
+            cache: t_db::PersistentDb::connect().await?,
 
             input: Input::default(),
             mode: AppMode::default(),
@@ -187,7 +187,7 @@ impl App {
             };
 
             // update db
-            t_db::Database::connect()
+            t_db::PersistentDb::connect()
                 .await?
                 .update_show(show.clone())
                 .await?;

@@ -1,7 +1,7 @@
 use log::*;
 
 use crate::models::TraktShow;
-use crate::trakt::t_db;
+use crate::trakt::t_db::{self, Database};
 
 pub mod imdb_reader;
 
@@ -18,7 +18,7 @@ pub mod imdb_reader;
 /// Load all shows from imdb data dump and db.
 /// TODO: for now, assume that first startup fills all rows into db.
 /// Eventually, we may have to update this to update db on startup from a new data dump.
-async fn load_combined_data_sources(db: &mut t_db::Database) -> eyre::Result<Vec<TraktShow>> {
+async fn load_combined_data_sources(db: &mut t_db::PersistentDb) -> eyre::Result<Vec<TraktShow>> {
     // load all shows, and fill db if db is empty
     // let items = imdb_reader::load_show_vec();
 
@@ -43,7 +43,7 @@ pub struct DataManager {
 
 impl DataManager {
     pub async fn init() -> eyre::Result<DataManager> {
-        let mut db = t_db::Database::connect().await?;
+        let mut db = t_db::PersistentDb::connect().await?;
         let items = load_combined_data_sources(&mut db).await?;
 
         Ok(DataManager { items })

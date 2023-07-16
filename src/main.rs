@@ -1,4 +1,5 @@
 #![feature(let_chains)]
+#![feature(type_alias_impl_trait)]
 
 mod interface;
 mod models;
