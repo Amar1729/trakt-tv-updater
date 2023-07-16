@@ -75,12 +75,14 @@ pub fn update_show(show: &TraktShow) -> eyre::Result<()> {
 }
 
 /// Update a show with details and seasons
-pub fn update_show_details(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -> eyre::Result<()> {
+pub fn update_show_with_seasons(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -> eyre::Result<Vec<TraktSeason>> {
     use self::seasons::dsl::*;
 
     let mut ctx = establish_ctx();
 
-    info!("Adding show details and seasons");
+    let mut trakt_seasons = vec![];
+
+    info!("Updating seasons...");
 
     for season in api_seasons {
         let trakt_season = TraktSeason {
@@ -102,6 +104,8 @@ pub fn update_show_details(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -
                     "Updated show season: {} {}",
                     &show.imdb_id, &season.ids.trakt
                 );
+
+                trakt_seasons.push(trakt_season);
             }
             Err(err) => {
                 error!("Failed db insert {}", err);
@@ -110,7 +114,7 @@ pub fn update_show_details(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -
         }
     }
 
-    Ok(())
+    Ok(trakt_seasons)
 }
 
 pub fn get_season_watch_status(trakt_id: u32) -> eyre::Result<UserStatusSeason> {

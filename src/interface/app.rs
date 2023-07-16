@@ -176,9 +176,11 @@ impl App {
         if self.mode == AppMode::MainView && let Some(i) = self.table_state.selected() {
             let show = &mut self.shows[i];
             match t_api::query_detailed(&self.client, &show.imdb_id).await {
-                Ok((show_details, season_details)) => {
+                Ok((show_details, api_seasons)) => {
                     // update a show's overview
                     show.overview = Some(show_details.overview.clone());
+                    show.network = Some(show_details.network.clone());
+                    show.no_episodes = Some(show_details.aired_episodes as i32);
 
                     // update a show's trakt_id in the db if show.trakt_id is currently None
                     if show.trakt_id == None {
@@ -188,13 +190,14 @@ impl App {
                     let _ = t_db::update_show(&show);
 
                     // insert the seasons of a show
-                    let _ = t_db::update_show_details(show, &season_details);
+                    // TODO: we'll change app.show_view.seasons to a vec of TraktSeasons instead
+                    let _ = t_db::update_show_with_seasons(show, &api_seasons);
 
                     self.show_view.show_details = Some(show_details);
-                    if !season_details.is_empty() {
+                    if !api_seasons.is_empty() {
                         self.show_view.season_table_state.select(Some(0));
                     }
-                    self.show_view.seasons = season_details;
+                    self.show_view.seasons = api_seasons;
 
                     self.mode = AppMode::SeasonView;
                 }

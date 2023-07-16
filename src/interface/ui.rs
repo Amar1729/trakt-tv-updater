@@ -184,7 +184,9 @@ fn initalize_app<B: Backend>(_app: &mut App, frame: &mut Frame<'_, B>) {
 
 /// Render details for a TV season.
 fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
-    if let Some(s_info) = &app.show_view.show_details {
+    if let Some(i) = app.table_state.selected() {
+        let show = app.shows[i].clone();
+
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
@@ -192,11 +194,11 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
 
         let text = Text::from(vec![
             Line::default(),
-            Line::from(format!("Release Year: {}", s_info.year.to_string())),
-            Line::from(format!("Network: {}", s_info.network.as_str())),
-            Line::from(format!("Episodes: {}", s_info.aired_episodes)),
+            Line::from(format!("Release Year: {}", show.release_year.unwrap_or_default())),
+            Line::from(format!("Network: {}", show.network.unwrap_or_default())),
+            Line::from(format!("Episodes: {}", show.no_episodes.unwrap_or_default())),
             Line::default(),
-            Line::from(s_info.overview.as_str()),
+            Line::from(show.overview.unwrap_or_default()),
         ]);
 
         let widget = Paragraph::new(text)
@@ -204,7 +206,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
             .style(Style::default())
             .block(
                 Block::default()
-                    .title(s_info.title.as_str())
+                    .title(show.primary_title.as_str())
                     .borders(Borders::ALL)
                     .style(Style::default().fg(Color::Gray)),
             );
