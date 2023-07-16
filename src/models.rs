@@ -1,5 +1,6 @@
 use super::schema::{episodes, seasons, trakt_shows};
 
+use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
 
 macro_rules! ratatui_line {
@@ -37,6 +38,19 @@ pub enum UserStatusEpisode {
     Watched,
 }
 
+impl From<UserStatusEpisode> for ratatui::text::Text<'_> {
+    fn from(value: UserStatusEpisode) -> Self {
+        match value {
+            UserStatusEpisode::Unwatched => Self {
+                lines: ratatui_line!("UNWATCHED"),
+            },
+            UserStatusEpisode::Watched => Self {
+                lines: ratatui_line!("WATCHED"),
+            },
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, diesel_derive_enum::DbEnum)]
 pub enum UserStatusShow {
     Unwatched,
@@ -58,6 +72,15 @@ impl From<UserStatusShow> for ratatui::text::Text<'_> {
             },
         }
     }
+}
+
+/// Track the specific datetime at which a user watched an episode.
+// #[derive(Clone, Debug, PartialEq, diesel_derive_enum::DbEnum)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct UserDateTimeStatus {
+    pub imdb_id: String,
+    pub trakt_id: i32,
+    pub watched: chrono::DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, Queryable, Selectable, Insertable, PartialEq)]
@@ -84,4 +107,18 @@ pub struct TraktSeason {
     pub show_id: i32,
     pub season_number: i32,
     pub user_status: UserStatusSeason,
+}
+
+#[derive(Clone, Debug, Queryable, Selectable, Insertable, PartialEq)]
+#[diesel(table_name = episodes)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+pub struct TraktEpisode {
+    pub id: i32,
+    pub show_id: i32,
+    pub season_number: i32,
+    pub episode_number: i32,
+    pub title: String,
+    pub first_aired: Option<NaiveDateTime>,
+    pub watched_at: Option<NaiveDateTime>,
+    pub user_status: UserStatusEpisode,
 }
