@@ -112,6 +112,23 @@ pub fn update_show_details(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -
     Ok(())
 }
 
+pub fn get_season_watch_status(trakt_id: u32) -> eyre::Result<UserStatusSeason> {
+    use crate::schema::seasons::dsl::*;
+
+    let mut ctx = establish_ctx();
+
+    let result = seasons
+        .filter(id.eq(trakt_id as i32))
+        .select(user_status)
+        .first::<UserStatusSeason>(&mut ctx)
+        .optional()?;
+
+    match result {
+        Some(status) => Ok(status),
+        None => Err(eyre::eyre!("No matching row found")),
+    }
+}
+
 /// Overwrites (or fills) db with the rows parsed from an IMDB data dump.
 pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) -> eyre::Result<()> {
     info!("Filling db...");

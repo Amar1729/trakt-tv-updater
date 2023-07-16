@@ -10,7 +10,11 @@ use ratatui::{
     Frame,
 };
 
-use crate::interface::app::{App, AppMode};
+use crate::{
+    interface::app::{App, AppMode},
+    models::UserStatusSeason,
+    trakt::t_db,
+};
 
 /// Render text input widget for querying shows
 fn render_input_area<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>, area: Rect) {
@@ -208,11 +212,20 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
         frame.render_widget(widget, chunks[0]);
 
         let rows = app.show_view.seasons.iter().map(|season| {
+            let trakt_id = season.ids.trakt;
+            // can't seem to figure out how to use a method on app, since i can't borrow it in here
+            let watch_status = t_db::get_season_watch_status(trakt_id)
+                .map_err(|_| {
+                    return UserStatusSeason::Unfilled;
+                })
+                .unwrap();
+
             Row::new(vec![
                 Cell::from(season.number.to_string()),
                 Cell::from(season.title.to_string()),
                 Cell::from(season.episode_count.to_string()),
                 Cell::from(season.first_aired.format("%Y-%m-%d").to_string()),
+                Cell::from(watch_status),
             ])
         });
 
@@ -225,7 +238,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
                         "title",
                         "#episodes",
                         "aired",
-                        // user_watched?
+                        "watch status",
                     ])
                     .style(Style::default().fg(Color::Yellow)),
                 )
@@ -237,6 +250,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
                     Constraint::Length(20),
                     Constraint::Length(10),
                     Constraint::Length(12),
+                    Constraint::Length(30),
                 ])
                 .style(Style::default().fg(Color::Cyan).bg(Color::Black)),
             chunks[1],
