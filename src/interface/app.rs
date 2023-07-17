@@ -1,5 +1,5 @@
 use crate::{
-    models::{TraktShow, UserStatusShow},
+    models::{TraktShow, UserStatusShow, TraktSeason},
     sources::DataManager,
     trakt::{t_api, t_db},
 };
@@ -31,8 +31,7 @@ pub enum AppMode {
 /// inner struct for detailed show views.
 #[derive(Debug, Default)]
 pub struct AppShowView {
-    pub show_details: Option<t_api::ApiShowDetails>,
-    pub seasons: Vec<t_api::ApiSeasonDetails>,
+    pub seasons: Vec<TraktSeason>,
 
     pub season_table_state: TableState,
     // unimpl'd yet...
@@ -190,14 +189,11 @@ impl App {
                     let _ = t_db::update_show(&show);
 
                     // insert the seasons of a show
-                    // TODO: we'll change app.show_view.seasons to a vec of TraktSeasons instead
-                    let _ = t_db::update_show_with_seasons(show, &api_seasons);
+                    self.show_view.seasons = t_db::update_show_with_seasons(show, &api_seasons)?;
 
-                    self.show_view.show_details = Some(show_details);
                     if !api_seasons.is_empty() {
                         self.show_view.season_table_state.select(Some(0));
                     }
-                    self.show_view.seasons = api_seasons;
 
                     self.mode = AppMode::SeasonView;
                 }

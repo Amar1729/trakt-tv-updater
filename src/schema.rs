@@ -16,8 +16,11 @@ diesel::table! {
 diesel::table! {
     seasons (id) {
         id -> Integer,
+        title -> Text,
+        first_aired -> Nullable<Timestamp>,
         show_id -> Integer,
         season_number -> Integer,
+        episode_count -> Integer,
         user_status -> crate::models::UserStatusSeasonMapping,
     }
 }

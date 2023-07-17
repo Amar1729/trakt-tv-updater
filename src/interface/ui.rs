@@ -4,17 +4,13 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
-        Block, BorderType, Borders, Cell, Gauge, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        Block, BorderType, Borders, Gauge, Paragraph, Row, Scrollbar, ScrollbarOrientation,
         Table, Wrap,
     },
     Frame,
 };
 
-use crate::{
-    interface::app::{App, AppMode},
-    models::UserStatusSeason,
-    trakt::t_db,
-};
+use crate::interface::app::{App, AppMode};
 
 /// Render text input widget for querying shows
 fn render_input_area<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>, area: Rect) {
@@ -71,17 +67,7 @@ fn render_shows_table<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>, area:
         .constraints([Constraint::Min(0), Constraint::Length(1)].as_ref())
         .split(area);
 
-    let rows = app.shows.iter().map(|show| {
-        Row::new(vec![
-            Cell::from(show.imdb_id.as_str()),
-            Cell::from(show.original_title.clone()),
-            Cell::from(match show.release_year {
-                Some(yy) => yy.to_string(),
-                None => "<unreleased>".to_string(),
-            }),
-            Cell::from(show.user_status.clone()),
-        ])
-    });
+    let rows = app.shows.iter().map(|show| Row::from(show));
 
     frame.render_stateful_widget(
         Table::new(rows)
@@ -192,14 +178,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
             .split(frame.size());
 
-        let text = Text::from(vec![
-            Line::default(),
-            Line::from(format!("Release Year: {}", show.release_year.unwrap_or_default())),
-            Line::from(format!("Network: {}", show.network.unwrap_or_default())),
-            Line::from(format!("Episodes: {}", show.no_episodes.unwrap_or_default())),
-            Line::default(),
-            Line::from(show.overview.unwrap_or_default()),
-        ]);
+        let text = Text::from(&show);
 
         let widget = Paragraph::new(text)
             .wrap(Wrap { trim: false })
@@ -213,23 +192,7 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
 
         frame.render_widget(widget, chunks[0]);
 
-        let rows = app.show_view.seasons.iter().map(|season| {
-            let trakt_id = season.ids.trakt;
-            // can't seem to figure out how to use a method on app, since i can't borrow it in here
-            let watch_status = t_db::get_season_watch_status(trakt_id)
-                .map_err(|_| {
-                    return UserStatusSeason::Unfilled;
-                })
-                .unwrap();
-
-            Row::new(vec![
-                Cell::from(season.number.to_string()),
-                Cell::from(season.title.to_string()),
-                Cell::from(season.episode_count.to_string()),
-                Cell::from(season.first_aired.format("%Y-%m-%d").to_string()),
-                Cell::from(watch_status),
-            ])
-        });
+        let rows = app.show_view.seasons.iter().map(|season| Row::from(season));
 
         // render a stateless season table for now.
         frame.render_stateful_widget(
@@ -248,10 +211,15 @@ fn render_season_view<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
                 .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
                 .highlight_symbol(">> ")
                 .widths(&[
+                    // season #
                     Constraint::Length(9),
+                    // title
                     Constraint::Length(20),
+                    // #episodes
                     Constraint::Length(10),
-                    Constraint::Length(12),
+                    // aired
+                    Constraint::Length(15),
+                    // watch status
                     Constraint::Length(30),
                 ])
                 .style(Style::default().fg(Color::Cyan).bg(Color::Black)),

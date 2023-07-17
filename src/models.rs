@@ -105,8 +105,11 @@ pub struct TraktShow {
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct TraktSeason {
     pub id: i32,
+    pub title: String,
+    pub first_aired: Option<NaiveDateTime>,
     pub show_id: i32,
     pub season_number: i32,
+    pub episode_count: i32,
     pub user_status: UserStatusSeason,
 }
 

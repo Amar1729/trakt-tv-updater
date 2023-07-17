@@ -7,6 +7,9 @@ mod event;
 /// Widget renderer.
 mod ui;
 
+/// Traits for converting db models to tui text/lines/cells
+mod ui_traits;
+
 /// Terminal user interface.
 mod tui;
 

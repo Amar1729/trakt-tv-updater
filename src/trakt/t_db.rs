@@ -87,8 +87,11 @@ pub fn update_show_with_seasons(show: &TraktShow, api_seasons: &[ApiSeasonDetail
     for season in api_seasons {
         let trakt_season = TraktSeason {
             id: season.ids.trakt as i32,
+            title: season.title.clone(),
+            first_aired: Some(season.first_aired.naive_utc()),
             show_id: show.trakt_id.unwrap() as i32,
             season_number: season.number as i32,
+            episode_count: season.episode_count as i32,
             user_status: UserStatusSeason::Unfilled,
         };
 
@@ -115,23 +118,6 @@ pub fn update_show_with_seasons(show: &TraktShow, api_seasons: &[ApiSeasonDetail
     }
 
     Ok(trakt_seasons)
-}
-
-pub fn get_season_watch_status(trakt_id: u32) -> eyre::Result<UserStatusSeason> {
-    use crate::schema::seasons::dsl::*;
-
-    let mut ctx = establish_ctx();
-
-    let result = seasons
-        .filter(id.eq(trakt_id as i32))
-        .select(user_status)
-        .first::<UserStatusSeason>(&mut ctx)
-        .optional()?;
-
-    match result {
-        Some(status) => Ok(status),
-        None => Err(eyre::eyre!("No matching row found")),
-    }
 }
 
 /// Overwrites (or fills) db with the rows parsed from an IMDB data dump.
