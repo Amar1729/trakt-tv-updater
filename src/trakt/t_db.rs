@@ -74,6 +74,29 @@ pub fn update_show(show: &TraktShow) -> eyre::Result<()> {
     }
 }
 
+/// update each(?) episode of a season, and the season entry in the db
+pub fn update_season(season: &TraktSeason) -> eyre::Result<()> {
+    use self::seasons::dsl::*;
+
+    let mut ctx = establish_ctx();
+
+    let updated_season = diesel::update(seasons.filter(id.eq(season.id)))
+        .set((
+            // update any rows likely to change
+            season_number.eq(&season.season_number),
+            episode_count.eq(&season.episode_count),
+            user_status.eq(&season.user_status),
+        ))
+        .get_result::<TraktSeason>(&mut ctx);
+
+    info!("Updated to season: {:?}", updated_season);
+
+    // TODO: update the episodes in this season, if necessary
+    // (if user selects ON_RELEASE for this season)
+
+    Ok(())
+}
+
 /// Update a show with details and seasons
 pub fn update_show_with_seasons(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -> eyre::Result<Vec<TraktSeason>> {
     use self::seasons::dsl::*;

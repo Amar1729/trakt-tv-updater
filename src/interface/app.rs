@@ -1,5 +1,5 @@
 use crate::{
-    models::{TraktShow, UserStatusShow, TraktSeason},
+    models::{TraktShow, UserStatusSeason, UserStatusShow, TraktSeason},
     sources::DataManager,
     trakt::{t_api, t_db},
 };
@@ -148,6 +148,25 @@ impl App {
             None => 0,
         };
         self.show_view.season_table_state.select(Some(i));
+    }
+
+    /// Cycle the watch status of a currently-selected season (similar to toggle_watch_status)
+    pub fn toggle_season_watch_status(&mut self) -> eyre::Result<()> {
+        if let Some(i) = self.show_view.season_table_state.selected() {
+            let season = &mut self.show_view.seasons[i];
+            info!("Currently selected season: {:?}", season);
+
+            season.user_status = match season.user_status {
+                UserStatusSeason::Unfilled => UserStatusSeason::OnRelease,
+                UserStatusSeason::OnRelease => UserStatusSeason::OtherDate,
+                UserStatusSeason::OtherDate => UserStatusSeason::Unfilled,
+            };
+
+            // Update database
+            t_db::update_season(season)?;
+        }
+
+        Ok(())
     }
 
     /// Cycle watch status of a currently-selected show in main window
