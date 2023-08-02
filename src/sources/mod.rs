@@ -1,9 +1,7 @@
-use crossbeam::channel::{Receiver, RecvError, Sender};
-use diesel::SqliteConnection;
 use log::*;
 
 use crate::models::TraktShow;
-use crate::trakt::t_db;
+use crate::trakt::t_db::{self, Database};
 
 pub mod imdb_reader;
 
@@ -20,66 +18,39 @@ pub mod imdb_reader;
 /// Load all shows from imdb data dump and db.
 /// TODO: for now, assume that first startup fills all rows into db.
 /// Eventually, we may have to update this to update db on startup from a new data dump.
-fn load_combined_data_sources(ctx: &mut SqliteConnection) -> eyre::Result<Vec<TraktShow>> {
+async fn load_combined_data_sources(db: &mut t_db::PersistentDb) -> eyre::Result<Vec<TraktShow>> {
     // load all shows, and fill db if db is empty
     // let items = imdb_reader::load_show_vec();
 
-    let row_count = t_db::count_trakt_db(ctx);
+    let row_count = db.count_shows().await;
     info!("row count: {}", row_count);
 
     if row_count < 100 {
         // if we dont have many rows in db (clean env or devel), load from imdb data
         let items = imdb_reader::load_show_vec();
         // TODO: put this on a thread, once i figure out borrowing?
-        t_db::prefill_db_from_imdb(ctx, &items).map(|()| items)
+        db.prefill_from_imdb(items.clone()).await.map(|()| items)
     } else {
         // query everything from db
-        Ok(t_db::load_filtered_shows(ctx))
+        Ok(db.filtered_shows().await)
     }
 }
 
 #[derive(Debug)]
 pub struct DataManager {
-    #[allow(dead_code)]
-    handle: std::thread::JoinHandle<()>,
-    query_sender: Sender<String>,
-    result_receiver: Receiver<Vec<TraktShow>>,
+    items: Vec<TraktShow>,
 }
 
 impl DataManager {
-    pub fn init() -> eyre::Result<DataManager> {
-        let mut ctx = t_db::establish_ctx();
-        let items = load_combined_data_sources(&mut ctx)?;
-        let (query_sender, query_receiver) = crossbeam::channel::unbounded();
-        let (result_sender, result_receiver) = crossbeam::channel::unbounded();
+    pub async fn init() -> eyre::Result<DataManager> {
+        let mut db = t_db::PersistentDb::connect().await?;
+        let items = load_combined_data_sources(&mut db).await?;
 
-        let handle = std::thread::spawn(move || {
-            loop {
-                match query_receiver.recv() {
-                    Ok(_query) => {
-                        // TODO: can i pass this as a ref instead of cloning?
-                        // would that even be better?
-                        result_sender.send(items.clone()).unwrap();
-                    }
-                    // happens when channel is empty + becomes disconnected
-                    // i think this only happens when user shuts down app
-                    Err(RecvError) => {}
-                }
-            }
-        });
-
-        Ok(DataManager {
-            handle,
-            query_sender,
-            result_receiver,
-        })
+        Ok(DataManager { items })
     }
 
     /// Returns `None` if the servicing thread has died.
-    pub fn query(&self, q: String) -> Option<Vec<TraktShow>> {
-        match (self.query_sender.send(q), self.result_receiver.recv()) {
-            (Ok(()), Ok(r)) => Some(r),
-            _ => None,
-        }
+    pub async fn query(&self, _q: String) -> Option<Vec<TraktShow>> {
+        Some(self.items.clone())
     }
 }

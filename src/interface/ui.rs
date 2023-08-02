@@ -4,8 +4,8 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
-        Block, BorderType, Borders, Gauge, Paragraph, Row, Scrollbar, ScrollbarOrientation,
-        Table, Wrap,
+        Block, BorderType, Borders, Gauge, Paragraph, Row, Scrollbar, ScrollbarOrientation, Table,
+        Wrap,
     },
     Frame,
 };

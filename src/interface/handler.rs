@@ -55,7 +55,7 @@ pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> eyre::Resu
                 app.mode = AppMode::Querying;
             }
             // cycle through watch status for a show
-            KeyCode::Char(' ') => app.toggle_watch_status()?,
+            KeyCode::Char(' ') => app.toggle_watch_status().await?,
 
             // open up tv show details view
             KeyCode::Char('l') | KeyCode::Right => {
@@ -81,7 +81,7 @@ pub async fn handle_key_events(key_event: KeyEvent, app: &mut App) -> eyre::Resu
             KeyCode::Left | KeyCode::Char('h') => app.mode = AppMode::MainView,
             KeyCode::Char('k') | KeyCode::Up => app.season_prev(1),
             KeyCode::Char('j') | KeyCode::Down => app.season_next(1),
-            KeyCode::Char(' ') => app.toggle_season_watch_status()?,
+            KeyCode::Char(' ') => app.toggle_season_watch_status().await?,
             _ => {}
         },
         _ => unimplemented!(),

@@ -1,180 +1,245 @@
 use crate::models::{TraktSeason, TraktShow, UserStatusSeason, UserStatusShow};
 use crate::schema::{seasons, trakt_shows};
+use crate::trakt::t_api::ApiSeasonDetails;
+
+use std::env;
+use std::future::Future;
+use std::sync::Arc;
 
 use chrono::prelude::*;
-use log::*;
-use std::env;
-
 use diesel::prelude::*;
 use dotenvy::dotenv;
+use eyre::Context;
+use futures::FutureExt;
+use log::*;
+use tokio::sync::Mutex;
 
-use super::t_api::ApiSeasonDetails;
+/// The cache database's interface. This is a trait to allow ease of testing.
+pub trait Database {
+    type Fut<T>: Future<Output = T>;
 
-pub fn establish_ctx() -> SqliteConnection {
-    dotenv().ok();
+    /// Count shows stored in the database.
+    fn count_shows(&self) -> Self::Fut<usize>;
 
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
-    SqliteConnection::establish(&database_url).unwrap_or_else(|err| {
-        info!("{}", err);
-        panic!();
-    })
+    /// Get all shows that are unwatched and are released.
+    fn filtered_shows(&self) -> Self::Fut<Vec<TraktShow>>;
+
+    /// Update the database status of a show.
+    fn update_show(&self, show: TraktShow) -> Self::Fut<eyre::Result<()>>;
+
+    fn update_season(&self, season: TraktSeason) -> Self::Fut<eyre::Result<()>>;
+
+    fn update_show_with_seasons(
+        &self,
+        show: &TraktShow,
+        api_seasons: &[ApiSeasonDetails],
+    ) -> Self::Fut<eyre::Result<Vec<TraktSeason>>>;
+
+    /// Fill database with shows loaded from the IMDB dump.
+    fn prefill_from_imdb(&self, rows: Vec<TraktShow>) -> Self::Fut<eyre::Result<()>>;
 }
 
-/// count the rows in the db
-/// (this should be fast - am i doing this inefficiently?)
-pub fn count_trakt_db(ctx: &mut SqliteConnection) -> usize {
-    use self::trakt_shows::dsl::*;
-
-    let rows = trakt_shows
-        .select(TraktShow::as_select())
-        .load_iter(ctx)
-        .unwrap();
-
-    rows.into_iter().count()
+/// Handle to sqlite-backed persistent database. Provides an async interface
+/// with synchronization handled inside.
+#[derive(Clone)]
+pub struct PersistentDb {
+    conn: Conn,
 }
 
-/// Return all rows in the db that are not marked as unwatched, and don't have release in the future
-pub fn load_filtered_shows(ctx: &mut SqliteConnection) -> Vec<TraktShow> {
-    let cap_year = Utc::now().year() + 1;
+type Conn = Arc<Mutex<SqliteConnection>>;
 
-    trakt_shows::table
-        .order_by(trakt_shows::release_year)
-        .filter(trakt_shows::release_year.le(cap_year))
-        .filter(trakt_shows::user_status.ne(UserStatusShow::Unwatched))
-        .select(TraktShow::as_returning())
-        .load(ctx)
-        .unwrap()
+impl std::fmt::Debug for PersistentDb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("PersistentDb { ... }")
+    }
 }
 
-/// update the status of a show **in the DB**
-pub fn update_show(show: &TraktShow) -> eyre::Result<()> {
-    use self::trakt_shows::dsl::*;
+// Name the anonymous future (with unstable type_alias_impl_trait feature) so it
+// may be referenced in a trait impl.
+pub type PersistentDbFuture<T> = impl Future<Output = T>;
 
-    let mut ctx = establish_ctx();
+impl Database for PersistentDb {
+    type Fut<T> = PersistentDbFuture<T>;
 
-    match diesel::insert_into(trakt_shows)
-        .values(show)
-        .on_conflict(imdb_id)
-        .do_update()
-        .set((
-            trakt_id.eq(&show.trakt_id),
-            user_status.eq(&show.user_status),
-            overview.eq(&show.overview),
-        ))
-        .execute(&mut ctx)
+    fn count_shows(&self) -> Self::Fut<usize> {
+        self.on_blocking_task(Self::count_shows_impl)
+    }
+
+    fn filtered_shows(&self) -> PersistentDbFuture<Vec<TraktShow>> {
+        self.on_blocking_task(Self::filtered_shows_impl)
+    }
+
+    fn update_show(&self, show: TraktShow) -> PersistentDbFuture<eyre::Result<()>> {
+        self.on_blocking_task(move |conn| Self::update_show_impl(conn, &show))
+    }
+
+    fn update_season(&self, season: TraktSeason) -> Self::Fut<eyre::Result<()>> {
+        self.on_blocking_task(move |conn| Self::update_season_impl(conn, &season))
+    }
+
+    fn update_show_with_seasons(
+        &self,
+        show: &TraktShow,
+        api_seasons: &[ApiSeasonDetails],
+    ) -> Self::Fut<eyre::Result<Vec<TraktSeason>>> {
+        let trakt_seasons: Vec<_> = api_seasons
+            .iter()
+            .map(|s| TraktSeason {
+                id: s.ids.trakt as i32,
+                title: s.title.clone(),
+                first_aired: Some(s.first_aired.naive_utc()),
+                show_id: show.trakt_id.unwrap() as i32,
+                season_number: s.number as i32,
+                episode_count: s.episode_count as i32,
+                user_status: UserStatusSeason::Unfilled,
+            })
+            .collect();
+
+        self.on_blocking_task(move |conn| Self::update_show_with_seasons_impl(conn, trakt_seasons))
+    }
+
+    fn prefill_from_imdb(&self, rows: Vec<TraktShow>) -> PersistentDbFuture<eyre::Result<()>> {
+        self.on_blocking_task(move |conn| Self::prefill_from_imdb_impl(conn, &rows))
+    }
+}
+
+impl PersistentDb {
+    pub fn connect_sync() -> eyre::Result<PersistentDb> {
+        dotenv().ok();
+
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
+        Ok(PersistentDb {
+            conn: Arc::new(Mutex::new(SqliteConnection::establish(&database_url)?)),
+        })
+    }
+
+    pub async fn connect() -> eyre::Result<PersistentDb> {
+        tokio::task::spawn_blocking(Self::connect_sync)
+            .await
+            .unwrap()
+    }
+
+    fn on_blocking_task<T, F>(&self, f: F) -> PersistentDbFuture<T>
+    where
+        F: 'static + Send + FnOnce(&mut SqliteConnection) -> T,
+        T: 'static + Send,
     {
-        Ok(_) => {
-            info!("Updated row: {}", &show.imdb_id);
-            Ok(())
-        }
-        Err(err) => {
-            info!("panik on update: {}", err);
-            Err(eyre::eyre!(err))
-        }
-    }
-}
-
-/// update each(?) episode of a season, and the season entry in the db
-pub fn update_season(season: &TraktSeason) -> eyre::Result<()> {
-    use self::seasons::dsl::*;
-
-    let mut ctx = establish_ctx();
-
-    let updated_season = diesel::update(seasons.filter(id.eq(season.id)))
-        .set((
-            // update any rows likely to change
-            season_number.eq(&season.season_number),
-            episode_count.eq(&season.episode_count),
-            user_status.eq(&season.user_status),
-        ))
-        .get_result::<TraktSeason>(&mut ctx);
-
-    info!("Updated to season: {:?}", updated_season);
-
-    // TODO: update the episodes in this season, if necessary
-    // (if user selects ON_RELEASE for this season)
-
-    Ok(())
-}
-
-/// Update a show with details and seasons
-pub fn update_show_with_seasons(show: &TraktShow, api_seasons: &[ApiSeasonDetails]) -> eyre::Result<Vec<TraktSeason>> {
-    use self::seasons::dsl::*;
-
-    let mut ctx = establish_ctx();
-
-    let mut trakt_seasons = vec![];
-
-    info!("Updating seasons...");
-
-    for season in api_seasons {
-        let trakt_season = TraktSeason {
-            id: season.ids.trakt as i32,
-            title: season.title.clone(),
-            first_aired: Some(season.first_aired.naive_utc()),
-            show_id: show.trakt_id.unwrap() as i32,
-            season_number: season.number as i32,
-            episode_count: season.episode_count as i32,
-            user_status: UserStatusSeason::Unfilled,
-        };
-
-        match diesel::insert_into(seasons)
-            .values(trakt_season.clone())
-            .on_conflict(id)
-            .do_update()
-            .set((season_number.eq(trakt_season.season_number),))
-            .execute(&mut ctx)
-        {
-            Ok(_) => {
-                info!(
-                    "Updated show season: {} {}",
-                    &show.imdb_id, &season.ids.trakt
-                );
-
-                trakt_seasons.push(trakt_season);
-            }
-            Err(err) => {
-                error!("Failed db insert {}", err);
-                return Err(eyre::eyre!(err));
-            }
-        }
+        let conn = self.conn.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut conn = conn.blocking_lock();
+            f(&mut *conn)
+        })
+        .map(Result::unwrap)
     }
 
-    Ok(trakt_seasons)
-}
+    fn count_shows_impl(conn: &mut SqliteConnection) -> usize {
+        use self::trakt_shows::dsl::*;
 
-/// Overwrites (or fills) db with the rows parsed from an IMDB data dump.
-pub fn prefill_db_from_imdb(ctx: &mut SqliteConnection, rows: &Vec<TraktShow>) -> eyre::Result<()> {
-    info!("Filling db...");
+        let rows: i64 = trakt_shows.count().get_result(conn).unwrap();
+        rows.try_into().unwrap()
+    }
 
-    use self::trakt_shows::dsl::*;
+    fn filtered_shows_impl(conn: &mut SqliteConnection) -> Vec<TraktShow> {
+        let cap_year = Utc::now().year() + 1;
 
-    for row in rows {
-        match diesel::insert_into(trakt_shows)
-            .values(row)
+        trakt_shows::table
+            .order_by(trakt_shows::release_year)
+            .filter(trakt_shows::release_year.le(cap_year))
+            .filter(trakt_shows::user_status.ne(UserStatusShow::Unwatched))
+            .select(TraktShow::as_returning())
+            .load(conn)
+            .unwrap()
+    }
+
+    fn update_show_impl(conn: &mut SqliteConnection, show: &TraktShow) -> eyre::Result<()> {
+        use self::trakt_shows::dsl::*;
+
+        diesel::insert_into(trakt_shows)
+            .values(show)
             .on_conflict(imdb_id)
             .do_update()
-            // update the values that might be updated in a new data dump
             .set((
-                release_year.eq(&row.release_year),
-                no_seasons.eq(&row.no_seasons),
-                no_episodes.eq(&row.no_episodes),
+                trakt_id.eq(&show.trakt_id),
+                user_status.eq(&show.user_status),
+                overview.eq(&overview),
             ))
-            .execute(ctx)
-        {
-            Ok(_c) => {
-                // can i count only which rows were updated?
-                info!("Inserted row: {}", &row.imdb_id);
-            }
-            Err(err) => {
-                // TODO: if this errs, should bubble up and quit app?
-                info!("Failed db insert: {}", err);
-                return Err(eyre::eyre!(err));
-            }
-        }
+            .execute(conn)
+            .map(|_| ())
+            .wrap_err("could not update show in db")?;
+
+        info!("Updated row: {}", &show.imdb_id);
+        Ok(())
     }
 
-    info!("Inserted/Updated {} rows.", rows.len());
+    pub fn update_season_impl(
+        conn: &mut SqliteConnection,
+        season: &TraktSeason,
+    ) -> eyre::Result<()> {
+        use self::seasons::dsl::*;
 
-    Ok(())
+        let updated_season: TraktSeason = diesel::update(seasons.filter(id.eq(season.id)))
+            .set((
+                season_number.eq(&season.season_number),
+                episode_count.eq(&season.episode_count),
+                user_status.eq(&season.user_status),
+            ))
+            .get_result(conn)?;
+
+        info!("Updated to season: {:?}", updated_season);
+
+        // TODO: update the episodes in this season, if necessary
+        // (if user selects ON_RELEASE for this season)
+
+        Ok(())
+    }
+
+    fn update_show_with_seasons_impl(
+        conn: &mut SqliteConnection,
+        trakt_seasons: Vec<TraktSeason>,
+    ) -> eyre::Result<Vec<TraktSeason>> {
+        use self::seasons::dsl::*;
+
+        for season in trakt_seasons.iter() {
+            diesel::insert_into(seasons)
+                .values(season)
+                .on_conflict(id)
+                .do_update()
+                .set(season_number.eq(season.season_number))
+                .execute(conn)
+                .wrap_err("failed db insert")?;
+        }
+
+        Ok(trakt_seasons)
+    }
+
+    fn prefill_from_imdb_impl(
+        conn: &mut SqliteConnection,
+        rows: &Vec<TraktShow>,
+    ) -> eyre::Result<()> {
+        info!("Filling db...");
+
+        use self::trakt_shows::dsl::*;
+
+        for row in rows {
+            diesel::insert_into(trakt_shows)
+                .values(row)
+                .on_conflict(imdb_id)
+                .do_update()
+                // update the values that might be updated in a new data dump
+                .set((
+                    release_year.eq(&row.release_year),
+                    no_seasons.eq(&row.no_seasons),
+                    no_episodes.eq(&row.no_episodes),
+                ))
+                .execute(conn)
+                .map(|_| ())
+                .wrap_err("could not insert show")?;
+
+            info!("Inserted row: {}", &row.imdb_id);
+        }
+
+        info!("Inserted/Updated {} rows.", rows.len());
+
+        Ok(())
+    }
 }
